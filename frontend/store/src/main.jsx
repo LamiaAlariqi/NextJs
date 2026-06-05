@@ -8,7 +8,7 @@ import axios from 'axios';
 import Cookies from 'js-cookie';
 
 // Configure Axios defaults globally
-axios.defaults.baseURL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+axios.defaults.baseURL = import.meta.env.VITE_API_URL || 'https://nextjs-3-7p7j.onrender.com';
 axios.defaults.withCredentials = true;
 
 // Intercept requests to attach Authorization header if token exists (crucial for cross-origin deployments)

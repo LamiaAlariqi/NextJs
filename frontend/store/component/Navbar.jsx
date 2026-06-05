@@ -61,25 +61,23 @@ const Navbar = () => {
             className="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52"
           >
             <li><Link to="/">Home</Link></li>
-            <li><Link to="/products">Products</Link></li>
-            <li><Link to="/about">AboutUs</Link></li>
+            <li><Link to="/about">About Us</Link></li>
             <li><Link to="/contact">Contact</Link></li>
           </ul>
         </div>
 
         {/* Logo */}
-        <a className="text-3xl font-bold ms-4 cursor-pointer">
+        <Link to="/" className="text-3xl font-bold ms-4 cursor-pointer">
           Daraz
-        </a>
+        </Link>
       </div>
 
       {/* CENTER (Desktop only) */}
       <div className="navbar-center hidden lg:flex">
         <ul className="menu menu-horizontal gap-4">
-          <li><a>Home</a></li>
-          <li><a>Products</a></li>
-          <li><a>Categories</a></li>
-          <li><a>Contact</a></li>
+          <li><Link to="/">Home</Link></li>
+          <li><Link to="/about">About Us</Link></li>
+          <li><Link to="/contact">Contact</Link></li>
         </ul>
       </div>
 
