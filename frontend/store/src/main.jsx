@@ -13,7 +13,7 @@ axios.defaults.withCredentials = true;
 
 // Intercept requests to attach Authorization header if token exists (crucial for cross-origin deployments)
 axios.interceptors.request.use((config) => {
-  const token = Cookies.get("token");
+  const token = Cookies.get("token") || localStorage.getItem("token");
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }

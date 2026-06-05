@@ -24,6 +24,7 @@ const Signup = () => {
         const token = response.data?.token;
         if (token) {
           Cookies.set("token", token, { expires: 7 });
+          localStorage.setItem("token", token);
         }
         if (response.data?.user) {
           localStorage.setItem("user", JSON.stringify(response.data.user));

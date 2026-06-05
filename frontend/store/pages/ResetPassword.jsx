@@ -30,6 +30,7 @@ const ResetPassword = () => {
         const resToken = res.data?.token;
         if (resToken) {
           Cookies.set("token", resToken, { expires: 7 });
+          localStorage.setItem("token", resToken);
         }
         if (res.data?.user) {
           localStorage.setItem("user", JSON.stringify(res.data.user));

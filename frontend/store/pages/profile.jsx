@@ -37,6 +37,7 @@ const Profile = () => {
       console.error("Logout error", error);
     }
     localStorage.removeItem("user");
+    localStorage.removeItem("token");
     Cookies.remove("token");
     toast.success("Logged out successfully");
     navigate('/login');

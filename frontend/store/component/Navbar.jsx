@@ -28,6 +28,7 @@ const Navbar = () => {
       console.error("Logout error", error);
     }
     localStorage.removeItem("user");
+    localStorage.removeItem("token");
     Cookies.remove("token"); // Optional: removes JS cookie if it exists
     setUser(null);
     toast.success("Logged out successfully");
