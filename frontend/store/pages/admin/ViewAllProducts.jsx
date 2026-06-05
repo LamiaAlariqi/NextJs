@@ -10,7 +10,7 @@ const ViewAllProducts = () => {
 
     const fetchProducts = async () => {
         try {
-            const response = await axios.get("http://localhost:8000/api/v1/products");
+            const response = await axios.get("/api/v1/products");
             setProducts(response.data.products || []);
         } catch (error) {
             console.error("Error fetching products:", error);
@@ -27,7 +27,7 @@ const ViewAllProducts = () => {
     const handleDelete = async (id) => {
         if (window.confirm("Are you sure you want to delete this product?")) {
             try {
-                await axios.delete(`http://localhost:8000/api/v1/product/${id}`, {
+                await axios.delete(`/api/v1/product/${id}`, {
                     withCredentials: true
                 });
                 toast.success("Product deleted successfully");

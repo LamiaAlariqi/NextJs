@@ -37,7 +37,7 @@ const UpdateProduct = () => {
     useEffect(() => {
         const fetchProductDetails = async () => {
             try {
-                const response = await axios.get(`http://localhost:8000/api/v1/product/${id}`);
+                const response = await axios.get(`/api/v1/product/${id}`);
                 const product = response.data.product;
                 
                 setTitle(product.title || '');
@@ -96,7 +96,7 @@ const UpdateProduct = () => {
                 images: validImages.length > 0 ? validImages : undefined
             };
 
-            await axios.put(`http://localhost:8000/api/v1/product/update/${id}`, productData, {
+            await axios.put(`/api/v1/product/update/${id}`, productData, {
                 withCredentials: true
             });
 

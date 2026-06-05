@@ -11,11 +11,11 @@ const DashboardAdmin = () => {
 
     const getDashboardData = async () => {
         try {
-            const responseProducts = await axios.get("http://localhost:8000/api/v1/products");
+            const responseProducts = await axios.get("/api/v1/products");
             setProducts(responseProducts.data.products || []);
             
             try {
-               const responseOrders = await axios.get("http://localhost:8000/api/v1/all_orders", { withCredentials: true });
+               const responseOrders = await axios.get("/api/v1/all_orders", { withCredentials: true });
                if(responseOrders.data?.orders) {
                    setOrdersCount(responseOrders.data.orders.length);
                }
@@ -24,7 +24,7 @@ const DashboardAdmin = () => {
             }
 
             try {
-               const responseUsers = await axios.get("http://localhost:8000/api/v1/all_users", { withCredentials: true });
+               const responseUsers = await axios.get("/api/v1/all_users", { withCredentials: true });
                if(responseUsers.data?.users) {
                    setUsersCount(responseUsers.data.users.length);
                }
@@ -39,7 +39,7 @@ const DashboardAdmin = () => {
 
     const getCombineStats = async () => {
         try {
-            const response = await axios.get("http://localhost:8000/api/v1/users/combine-data", {
+            const response = await axios.get("/api/v1/users/combine-data", {
                 withCredentials: true
             });
             setCombineStats(response.data);

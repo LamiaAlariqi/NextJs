@@ -53,7 +53,7 @@ const Home = () => {
   const getAllProducts = async (page = 1) => {
     try {
       setLoading(true);
-      let link = `http://localhost:8000/api/v1/products?page=${page}&`;
+      let link = `/api/v1/products?page=${page}&`;
 
       if (keyword) link += `keyword=${encodeURIComponent(keyword)}&`;
       if (category) {
@@ -92,7 +92,7 @@ const Home = () => {
     
     // Fetch reset products immediately
     setLoading(true);
-    axios.get("http://localhost:8000/api/v1/products?page=1")
+    axios.get("/api/v1/products?page=1")
       .then(res => {
         setProducts(res.data.products || []);
         const filteredCount = res.data.filteredProductsCount || 0;

@@ -12,7 +12,7 @@ const ProductDetail = () => {
 
   const getProductDetails = async () => {
     try {
-      const response = await axios.get(`http://localhost:8000/api/v1/product/${id}`);
+      const response = await axios.get(`/api/v1/product/${id}`);
       setProduct(response.data.product);
     } catch (error) {
       console.log(error);

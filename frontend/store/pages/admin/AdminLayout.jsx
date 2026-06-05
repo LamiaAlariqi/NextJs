@@ -13,7 +13,7 @@ const AdminLayout = ({ children }) => {
             try {
                 // لا نحتاج للبحث عن الكوكي في الجافاسكريبت لأنها HttpOnly، 
                 // المتصفح سيرسلها تلقائياً بفضل `withCredentials: true`
-                const response = await axios.get('http://localhost:8000/api/v1/user/role', {
+                const response = await axios.get('/api/v1/user/role', {
                     withCredentials: true 
                 });
                 

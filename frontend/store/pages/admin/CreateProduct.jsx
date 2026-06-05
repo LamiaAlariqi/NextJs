@@ -44,7 +44,7 @@ const CreateProduct = () => {
                 images: images.filter(img => img.public_id && img.url)
             };
 
-            const response = await axios.post('http://localhost:8000/api/v1/product/new', productData, {
+            const response = await axios.post('/api/v1/product/new', productData, {
                 withCredentials: true
             });
 

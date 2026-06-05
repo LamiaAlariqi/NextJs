@@ -9,7 +9,7 @@ const ViewAllOrders = () => {
 
     const fetchOrders = async () => {
         try {
-            const response = await axios.get("http://localhost:8000/api/v1/all_orders", { withCredentials: true });
+            const response = await axios.get("/api/v1/all_orders", { withCredentials: true });
             if (response.data.success) {
                 setOrders(response.data.orders);
             }
@@ -27,7 +27,7 @@ const ViewAllOrders = () => {
 
     const handleStatusChange = async (orderId, newStatus) => {
         try {
-            await axios.put(`http://localhost:8000/api/v1/update_order_status/${orderId}`, { status: newStatus }, {
+            await axios.put(`/api/v1/update_order_status/${orderId}`, { status: newStatus }, {
                 withCredentials: true
             });
             toast.success("Order status updated successfully");
@@ -35,7 +35,7 @@ const ViewAllOrders = () => {
             if (newStatus === 'Delivered') {
                 // Automatically delete the order once it is delivered, as requested by the user
                 try {
-                    await axios.delete(`http://localhost:8000/api/v1/delete_order/${orderId}`, {
+                    await axios.delete(`/api/v1/delete_order/${orderId}`, {
                         withCredentials: true
                     });
                     toast.info("Order has been automatically deleted since it is delivered.");
@@ -57,7 +57,7 @@ const ViewAllOrders = () => {
     const handleDelete = async (orderId) => {
         if (window.confirm("Are you sure you want to delete this delivered order?")) {
             try {
-                await axios.delete(`http://localhost:8000/api/v1/delete_order/${orderId}`, {
+                await axios.delete(`/api/v1/delete_order/${orderId}`, {
                     withCredentials: true
                 });
                 toast.success("Order deleted successfully");

@@ -9,7 +9,7 @@ const ViewAllUsers = () => {
 
     const fetchUsers = async () => {
         try {
-            const response = await axios.get("http://localhost:8000/api/v1/all_users", { withCredentials: true });
+            const response = await axios.get("/api/v1/all_users", { withCredentials: true });
             if (response.data.success) {
                 setUsers(response.data.users);
             }
@@ -27,7 +27,7 @@ const ViewAllUsers = () => {
 
     const handleRoleChange = async (userId, newRole) => {
         try {
-            await axios.put(`http://localhost:8000/api/v1/admin/user/role/${userId}`, { role: newRole }, {
+            await axios.put(`/api/v1/admin/user/role/${userId}`, { role: newRole }, {
                 withCredentials: true
             });
             toast.success("User role updated successfully");
