@@ -4,11 +4,19 @@ import { useCart } from '../src/context/CartContext';
 import { toast } from 'react-toastify';
 import axios from 'axios';
 
+// صور بطاقات الدفع
+const paymentIcons = {
+  visa: 'https://upload.wikimedia.org/wikipedia/commons/4/41/Visa_Logo.png',
+  mastercard: 'https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg',
+};
+
 const Cart = () => {
   const { cartItems, removeFromCart, updateCartQuantity, clearCart } = useCart();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [stripeLoading, setStripeLoading] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(null);
+  const [paymentMethod, setPaymentMethod] = useState('cod'); // 'cod' | 'stripe'
 
   // Shipping Form State
   const [shippingInfo, setShippingInfo] = useState({
@@ -32,7 +40,7 @@ const Cart = () => {
   const taxPrice = Math.round(subtotal * 0.15 * 100) / 100; // 15% VAT
   const totalPrice = Math.round((subtotal + shippingPrice + taxPrice) * 100) / 100;
 
-  // Checkout Handler
+  // Checkout Handler (Cash on Delivery)
   const handleCheckout = async (e) => {
     e.preventDefault();
 
@@ -43,8 +51,6 @@ const Cart = () => {
       navigate('/login');
       return;
     }
-
-    const user = JSON.parse(storedUser);
 
     // 2. Validate inputs
     if (!shippingInfo.address.trim()) {
@@ -60,9 +66,15 @@ const Cart = () => {
       return;
     }
 
+    if (paymentMethod === 'stripe') {
+      // دفع عن طريق Stripe
+      await handleStripeCheckout();
+      return;
+    }
+
     setLoading(true);
 
-    // 3. Prepare order payload
+    // 3. Prepare order payload (Cash on Delivery)
     const orderData = {
       orderItems: cartItems.map((item) => ({
         name: item.name,
@@ -101,6 +113,58 @@ const Cart = () => {
       toast.error(error.response?.data?.message || 'فشل إرسال الطلب، الرجاء التحقق من المدخلات والمخزون');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Stripe Checkout Handler
+  const handleStripeCheckout = async () => {
+    setStripeLoading(true);
+    try {
+      // حفظ الطلب مؤقتاً لاستخدامه بعد نجاح الدفع
+      const pendingOrder = {
+        orderItems: cartItems.map((item) => ({
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+          image: item.image,
+          product: item.product,
+        })),
+        shippingInfo,
+        taxPrice,
+        shippingPrice,
+        totalPrice,
+      };
+      localStorage.setItem('pendingOrder', JSON.stringify(pendingOrder));
+
+      // جلب التوكن من localStorage للمصادقة
+      const token = localStorage.getItem('token');
+
+      // إنشاء جلسة Stripe مع إرسال التوكن
+      const { data } = await axios.post('/api/v1/payment/checkout', pendingOrder, {
+        withCredentials: true,
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+
+      if (data.success && data.url) {
+        // تحويل المستخدم لصفحة Stripe للدفع
+        window.location.href = data.url;
+      } else {
+        toast.error('حدث خطأ في بوابة الدفع، حاول مرة أخرى');
+      }
+    } catch (error) {
+      console.error('Stripe Error:', error);
+      const status = error.response?.status;
+      const msg = error.response?.data?.message;
+
+      if (status === 401 || msg === 'Plz Login first') {
+        toast.error('يجب تسجيل الدخول أولاً لإتمام الدفع');
+        // توجيه للصفحة الرئيسية أو صفحة الدخول
+        setTimeout(() => window.location.href = '/login', 1500);
+      } else {
+        toast.error(msg || 'فشل الاتصال ببوابة الدفع');
+      }
+    } finally {
+      setStripeLoading(false);
     }
   };
 
@@ -361,20 +425,84 @@ const Cart = () => {
                     </div>
                   </div>
 
-                  {/* Payment Method Note */}
-                  <div className="p-3 bg-base-200 rounded-xl text-xs text-gray-500 space-y-1 mt-2">
-                    <p className="font-bold text-gray-700">طريقة الدفع المتاحة:</p>
-                    <p>• الدفع عند الاستلام (Cash on Delivery)</p>
+                  {/* Payment Method Selection */}
+                  <div className="space-y-3 mt-2">
+                    <p className="font-bold text-sm text-right">اختر طريقة الدفع:</p>
+                    
+                    {/* Cash on Delivery */}
+                    <label
+                      className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${
+                        paymentMethod === 'cod'
+                          ? 'border-primary bg-primary/5'
+                          : 'border-base-200 hover:border-primary/40'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="paymentMethod"
+                        value="cod"
+                        checked={paymentMethod === 'cod'}
+                        onChange={() => setPaymentMethod('cod')}
+                        className="radio radio-primary radio-sm"
+                      />
+                      <span className="text-2xl">💵</span>
+                      <div className="text-right flex-1">
+                        <p className="font-semibold text-sm">الدفع عند الاستلام</p>
+                        <p className="text-xs text-base-content/50">Cash on Delivery</p>
+                      </div>
+                    </label>
+
+                    {/* Stripe */}
+                    <label
+                      className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${
+                        paymentMethod === 'stripe'
+                          ? 'border-violet-500 bg-violet-50 dark:bg-violet-900/10'
+                          : 'border-base-200 hover:border-violet-400'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="paymentMethod"
+                        value="stripe"
+                        checked={paymentMethod === 'stripe'}
+                        onChange={() => setPaymentMethod('stripe')}
+                        className="radio radio-sm"
+                        style={{ accentColor: '#7c3aed' }}
+                      />
+                      <span className="text-2xl">💳</span>
+                      <div className="text-right flex-1">
+                        <p className="font-semibold text-sm">الدفع ببطاقة ائتمانية</p>
+                        <p className="text-xs text-base-content/50">Visa / Mastercard عبر Stripe</p>
+                      </div>
+                      <div className="flex gap-1 items-center">
+                        <div className="w-8 h-5 bg-blue-600 rounded text-white text-[8px] font-black flex items-center justify-center">VISA</div>
+                        <div className="w-8 h-5 rounded overflow-hidden flex">
+                          <div className="w-4 h-5 bg-red-500 opacity-80"></div>
+                          <div className="w-4 h-5 bg-yellow-400 opacity-80"></div>
+                        </div>
+                      </div>
+                    </label>
                   </div>
 
                   {/* Submit Order Button */}
                   <button 
                     type="submit" 
-                    disabled={loading}
-                    className="btn btn-primary w-full shadow-lg shadow-primary/20 text-white font-bold text-lg mt-4 h-12"
+                    disabled={loading || stripeLoading}
+                    className={`btn w-full text-white font-bold text-lg mt-4 h-12 shadow-lg ${
+                      paymentMethod === 'stripe'
+                        ? 'bg-violet-600 hover:bg-violet-700 border-violet-600 shadow-violet-300'
+                        : 'btn-primary shadow-primary/20'
+                    }`}
                   >
-                    {loading ? (
+                    {(loading || stripeLoading) ? (
                       <span className="loading loading-spinner"></span>
+                    ) : paymentMethod === 'stripe' ? (
+                      <span className="flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                        </svg>
+                        ادفع الآن عبر Stripe
+                      </span>
                     ) : (
                       'تأكيد الطلب وشراء'
                     )}

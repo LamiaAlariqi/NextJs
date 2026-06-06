@@ -19,6 +19,7 @@ import CreateProduct from '../pages/admin/CreateProduct'
 import ViewAllProducts from '../pages/admin/ViewAllProducts'
 import UpdateProduct from '../pages/admin/UpdateProduct'
 import Cart from '../pages/Cart'
+import PaymentSuccess from '../pages/PaymentSuccess'
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -32,6 +33,7 @@ function App() {
         <Route path='/about' element={<About />} />
         <Route path='/contact' element={<Contact />} />
         <Route path='/cart' element={<Cart />} />
+        <Route path='/payment/success' element={<PaymentSuccess />} />
         <Route path='/product-detail/:id' element={<ProductDetail />} />
         <Route path='/login' element={<Login />} />
         <Route path='/signup' element={<Signup />} />
