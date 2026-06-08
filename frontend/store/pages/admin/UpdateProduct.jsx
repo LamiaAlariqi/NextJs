@@ -16,7 +16,9 @@ const UpdateProduct = () => {
     const [price, setPrice] = useState('');
     const [category, setCategory] = useState('');
     const [stock, setStock] = useState('');
-    const [images, setImages] = useState([{ public_id: '', url: '' }]);
+    const [images, setImages] = useState([]);
+    const [oldImages, setOldImages] = useState([]);
+    const [imagesPreview, setImagesPreview] = useState([]);
 
     const categories = [
         "إلكترونيات",
@@ -46,10 +48,8 @@ const UpdateProduct = () => {
                 setCategory(product.category || '');
                 setStock(product.stock !== undefined && product.stock !== null ? product.stock : '');
                 
-                if (product.images && product.images.length > 0) {
-                    setImages(product.images);
-                } else {
-                    setImages([{ public_id: '', url: '' }]);
+                if (product.images) {
+                    setOldImages(product.images);
                 }
             } catch (error) {
                 console.error("Error fetching product details:", error);
@@ -63,37 +63,50 @@ const UpdateProduct = () => {
         fetchProductDetails();
     }, [id, navigate]);
 
-    const handleImageChange = (index, field, value) => {
-        const newImages = [...images];
-        newImages[index][field] = value;
-        setImages(newImages);
+    const handleImageChange = (e) => {
+        const files = Array.from(e.target.files);
+
+        files.forEach((file) => {
+            const reader = new FileReader();
+
+            reader.onload = () => {
+                if (reader.readyState === 2) {
+                    setImagesPreview((old) => [...old, reader.result]);
+                    setImages((old) => [...old, reader.result]);
+                }
+            };
+
+            reader.readAsDataURL(file);
+        });
     };
 
-    const addImageField = () => {
-        setImages([...images, { public_id: '', url: '' }]);
+    const removeOldImage = (index) => {
+        setOldImages(oldImages.filter((_, i) => i !== index));
     };
 
-    const removeImageField = (index) => {
-        const newImages = [...images];
-        newImages.splice(index, 1);
-        setImages(newImages);
+    const removeNewImage = (index) => {
+        setImages(images.filter((_, i) => i !== index));
+        setImagesPreview(imagesPreview.filter((_, i) => i !== index));
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        
+        if (oldImages.length === 0 && images.length === 0) {
+            toast.error("Please provide at least one image");
+            return;
+        }
+
         setIsSubmitting(true);
 
         try {
-            // Filter out empty images
-            const validImages = images.filter(img => img.url.trim() !== '');
-
             const productData = {
                 title,
                 description,
                 price: Number(price),
                 category,
                 stock: Number(stock),
-                images: validImages.length > 0 ? validImages : undefined
+                images: [...oldImages, ...images]
             };
 
             await axios.put(`/api/v1/product/update/${id}`, productData, {
@@ -214,52 +227,62 @@ const UpdateProduct = () => {
                     <div className="lg:col-span-1 space-y-6">
                         <div className="card bg-base-100 shadow-xl border border-base-200">
                             <div className="card-body">
-                                <div className="flex justify-between items-center border-b border-base-200 pb-2 mb-4">
-                                    <h2 className="card-title text-xl text-primary">Images</h2>
-                                    <button type="button" onClick={addImageField} className="btn btn-xs btn-outline btn-primary">
-                                        Add
-                                    </button>
-                                </div>
+                                <h2 className="card-title text-xl text-primary border-b border-base-200 pb-2 mb-4">Images</h2>
                                 
-                                <div className="space-y-4 max-h-[400px] overflow-y-auto custom-scrollbar pr-2">
-                                    {images.map((image, index) => (
-                                        <div key={index} className="p-4 bg-base-200 rounded-xl relative group border border-base-300">
-                                            {images.length > 1 && (
-                                                <button 
-                                                    type="button" 
-                                                    onClick={() => removeImageField(index)}
-                                                    className="btn btn-circle btn-xs btn-error absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity shadow-md"
-                                                >
-                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
-                                                </button>
-                                            )}
-                                            
-                                            {image.url && (
-                                                <div className="w-full h-32 bg-base-100 rounded-lg mb-3 overflow-hidden border border-base-300">
-                                                    <img src={image.url} alt="Preview" className="w-full h-full object-cover" />
-                                                </div>
-                                            )}
-
-                                            <div className="space-y-2">
-                                                <input 
-                                                    type="text" 
-                                                    placeholder="Image URL" 
-                                                    className="input input-sm input-bordered w-full" 
-                                                    value={image.url}
-                                                    onChange={(e) => handleImageChange(index, 'url', e.target.value)}
-                                                    required={index === 0}
-                                                />
-                                                <input 
-                                                    type="text" 
-                                                    placeholder="Public ID (Optional)" 
-                                                    className="input input-sm input-bordered w-full" 
-                                                    value={image.public_id}
-                                                    onChange={(e) => handleImageChange(index, 'public_id', e.target.value)}
-                                                />
-                                            </div>
-                                        </div>
-                                    ))}
+                                <div className="form-control w-full mb-4">
+                                    <label className="label">
+                                        <span className="label-text font-semibold">Upload New Images</span>
+                                    </label>
+                                    <input 
+                                        type="file" 
+                                        accept="image/*" 
+                                        multiple 
+                                        onChange={handleImageChange}
+                                        className="file-input file-input-bordered file-input-primary w-full file-input-sm" 
+                                    />
                                 </div>
+
+                                {/* Existing Images */}
+                                {oldImages.length > 0 && (
+                                    <div className="space-y-3">
+                                        <p className="text-xs font-bold text-base-content/70">Current Images:</p>
+                                        <div className="grid grid-cols-2 gap-2 max-h-[200px] overflow-y-auto pr-1">
+                                            {oldImages.map((image, index) => (
+                                                <div key={index} className="relative group rounded-lg overflow-hidden border border-base-300 bg-base-200 h-24">
+                                                    <img src={image.url} alt="Current Product" className="w-full h-full object-cover" />
+                                                    <button 
+                                                        type="button" 
+                                                        onClick={() => removeOldImage(index)}
+                                                        className="btn btn-circle btn-xs btn-error absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                    >
+                                                        ✕
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* New Previews */}
+                                {imagesPreview.length > 0 && (
+                                    <div className="space-y-3 mt-4 border-t border-base-200 pt-4">
+                                        <p className="text-xs font-bold text-primary">New Images to Upload:</p>
+                                        <div className="grid grid-cols-2 gap-2 max-h-[200px] overflow-y-auto pr-1">
+                                            {imagesPreview.map((image, index) => (
+                                                <div key={index} className="relative group rounded-lg overflow-hidden border border-base-300 bg-base-200 h-24">
+                                                    <img src={image} alt="New Preview" className="w-full h-full object-cover" />
+                                                    <button 
+                                                        type="button" 
+                                                        onClick={() => removeNewImage(index)}
+                                                        className="btn btn-circle btn-xs btn-error absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                    >
+                                                        ✕
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
 

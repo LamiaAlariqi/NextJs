@@ -18,11 +18,27 @@
 
 import Product from "../models/ProductModel.js";
 import ApiFeatures from "../util/ApiFeatures.js";
+import cloudinary from "../util/cloudinary.js";
 
 // create product 
 export const createProducts = async (req, res) => {
     try {
         const { title, description, price, category, stock, images } = req.body;
+        
+        let imagesLinks = [];
+
+        if (images && images.length > 0) {
+            for (let i = 0; i < images.length; i++) {
+                const result = await cloudinary.uploader.upload(images[i], {
+                    folder: "products",
+                });
+
+                imagesLinks.push({
+                    public_id: result.public_id,
+                    url: result.secure_url,
+                });
+            }
+        }
         
         const product = await Product.create({
             title,
@@ -30,7 +46,7 @@ export const createProducts = async (req, res) => {
             price,
             category,
             stock,
-            images
+            images: imagesLinks
         });
 
         if (!product) {
@@ -119,6 +135,40 @@ export const updateProduct = async (req, res) => {
             });
         }
 
+        // Handle images update
+        if (req.body.images) {
+            const newImagesList = req.body.images;
+            const oldImages = product.images;
+
+            // Delete old images not in the new list from Cloudinary
+            for (let i = 0; i < oldImages.length; i++) {
+                const oldImg = oldImages[i];
+                const isStillPresent = newImagesList.some(img => typeof img === 'object' && img.public_id === oldImg.public_id);
+                if (!isStillPresent) {
+                    await cloudinary.uploader.destroy(oldImg.public_id);
+                }
+            }
+
+            const imagesLinks = [];
+            for (let i = 0; i < newImagesList.length; i++) {
+                const img = newImagesList[i];
+                if (typeof img === 'string') {
+                    // new Base64 image
+                    const result = await cloudinary.uploader.upload(img, {
+                        folder: "products",
+                    });
+                    imagesLinks.push({
+                        public_id: result.public_id,
+                        url: result.secure_url,
+                    });
+                } else if (img && img.public_id && img.url) {
+                    // existing image
+                    imagesLinks.push(img);
+                }
+            }
+            req.body.images = imagesLinks;
+        }
+
         product = await Product.findByIdAndUpdate(req.params.id, req.body, {
             new: true,
             runValidators: true,
@@ -149,6 +199,13 @@ export const deleteProduct = async (req, res) => {
                 success: false,
                 message: "Product not found"
             });
+        }
+
+        // Delete images from Cloudinary
+        for (let i = 0; i < product.images.length; i++) {
+            if (product.images[i].public_id) {
+                await cloudinary.uploader.destroy(product.images[i].public_id);
+            }
         }
 
         product = await Product.findByIdAndDelete(req.params.id);
@@ -201,6 +258,40 @@ export const updateProductController = async (req, res) => {
                 success: false,
                 message: "Product not found"
             });
+        }
+
+        // Handle images update
+        if (req.body.images) {
+            const newImagesList = req.body.images;
+            const oldImages = product.images;
+
+            // Delete old images not in the new list from Cloudinary
+            for (let i = 0; i < oldImages.length; i++) {
+                const oldImg = oldImages[i];
+                const isStillPresent = newImagesList.some(img => typeof img === 'object' && img.public_id === oldImg.public_id);
+                if (!isStillPresent) {
+                    await cloudinary.uploader.destroy(oldImg.public_id);
+                }
+            }
+
+            const imagesLinks = [];
+            for (let i = 0; i < newImagesList.length; i++) {
+                const img = newImagesList[i];
+                if (typeof img === 'string') {
+                    // new Base64 image
+                    const result = await cloudinary.uploader.upload(img, {
+                        folder: "products",
+                    });
+                    imagesLinks.push({
+                        public_id: result.public_id,
+                        url: result.secure_url,
+                    });
+                } else if (img && img.public_id && img.url) {
+                    // existing image
+                    imagesLinks.push(img);
+                }
+            }
+            req.body.images = imagesLinks;
         }
 
         product = await Product.findByIdAndUpdate(req.params.id, req.body, {

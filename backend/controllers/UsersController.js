@@ -2,25 +2,35 @@ import User from '../models/UserModel.js';
 import crypto from 'crypto';
 import { sendToken } from '../util/jwtToken.js';
 import { sendEmail } from '../util/sendmail.js';
+import cloudinary from "../util/cloudinary.js";
 
 export const registerUserController = async (req, res) => {
     try {
         // 1. استلام البيانات من الطلب (req.body)
         const { name, email, password, profile, role } = req.body;
 
-        // 2. إنشاء المستخدم في قاعدة البيانات
+        let myCloud;
+        if (profile) {
+            myCloud = await cloudinary.uploader.upload(profile, {
+                folder: "avatars",
+                width: 150,
+                crop: "scale",
+            });
+        }
+
+
         const user = await User.create({
             name,
             email,
             password,
-            role, // إضافة الرول هنا
+            role,
             profile: {
-                public_id: "id",
-                url: "url"
+                public_id: myCloud ? myCloud.public_id : "default_avatar_id",
+                url: myCloud ? myCloud.secure_url : "https://img.daisyui.com/images/stock/photo-1534528741775-53994a69daeb.webp"
             }
         });
 
-        // 3. التحقق مما إذا تم إنشاء المستخدم بنجاح
+
         if (!user) {
             return res.status(400).json({
                 success: false,
@@ -28,16 +38,10 @@ export const registerUserController = async (req, res) => {
             });
         }
 
-        // 4. إرسال رد النجاح
-        // return res.status(201).json({
-        //     success: true,
-        //     message: "User registered successfully",
-        //     user
-        // });
         sendToken(user, 200, res);
 
     } catch (error) {
-        // 5. التعامل مع الأخطاء (مثل إيميل مكرر أو بيانات ناقصة)
+        console.error(error);
         return res.status(500).json({
             success: false,
             message: "Error in registration",
@@ -117,36 +121,56 @@ export const userProfileController = async (req, res) => {
 };
 export const updateUserProfileController = async (req, res) => {
     try {
-        // 1. البحث عن المستخدم أولاً للتأكد من وجوده
-        // let user = await User.findById(req.params.id);
+        const userId = req.params.id || req.user?._id;
+        let currentUser = await User.findById(userId);
 
-        // if (!user) {
-        //     return res.status(404).json({
-        //         success: false,
-        //         message: "User not found"
-        //     });
-        // }
-        // 2. تحديث البيانات باستخدام الحقول المرسلة في req.body
-        let user = await User.findByIdAndUpdate(req.user._id, req.body, {
+        if (!currentUser) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
+            });
+        }
+
+        // Handle image update
+        if (req.body.profile) {
+            // If it's a new base64 string
+            if (typeof req.body.profile === 'string' && req.body.profile.startsWith('data:image')) {
+                // Delete old avatar if it exists and is not default
+                if (currentUser.profile && currentUser.profile.public_id && currentUser.profile.public_id !== "default_avatar_id" && currentUser.profile.public_id !== "id") {
+                    try {
+                        await cloudinary.uploader.destroy(currentUser.profile.public_id);
+                    } catch (err) {
+                        console.error("Error deleting old profile image:", err);
+                    }
+                }
+
+                // Upload new avatar
+                const myCloud = await cloudinary.uploader.upload(req.body.profile, {
+                    folder: "avatars",
+                    width: 150,
+                    crop: "scale",
+                });
+
+                req.body.profile = {
+                    public_id: myCloud.public_id,
+                    url: myCloud.secure_url
+                };
+            }
+        }
+
+        const updatedUser = await User.findByIdAndUpdate(userId, req.body, {
             new: true,
             runValidators: true,
             useFindAndModify: false
-        })
-
-        // 2. تحديث البيانات باستخدام الحقول المرسلة في req.body
-        user = await User.findByIdAndUpdate(req.params.id, req.body, {
-            new: true,           // لكي تعود لك البيانات "بعد" التعديل وليس قبله
-            runValidators: true, // للتأكد من أن البيانات الجديدة تطابق شروط السكيما
-            useFindAndModify: false
         });
 
-        // 3. إرسال رد النجاح مع بيانات المستخدم المحدثة
         return res.status(200).json({
             success: true,
-            user
+            user: updatedUser
         });
 
     } catch (error) {
+        console.error(error);
         return res.status(500).json({
             success: false,
             message: "Error in updating profile",
@@ -156,29 +180,33 @@ export const updateUserProfileController = async (req, res) => {
 };
 export const deleteUserProfileController = async (req, res) => {
     try {
-        // 1. البحث عن المستخدم أولاً قبل محاولة الحذف
-        // let user = await User.findById(req.params.id);
+        const userId = req.params.id || req.user?._id;
+        const user = await User.findById(userId);
 
-        // if (!user) {
-        //     return res.status(404).json({
-        //         success: false,
-        //         message: "user not found"
-        //     });
-        // }
-        //عشان اخذ الاي دي من الكوكيز مش params
-        let user = await User.findByIdAndDelete(req.user._id)
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
+            });
+        }
 
-        // 2. تنفيذ عملية الحذف من قاعدة البيانات
-        user = await User.findByIdAndDelete(req.params.id);
+        // Delete avatar from Cloudinary if not default
+        if (user.profile && user.profile.public_id && user.profile.public_id !== "default_avatar_id" && user.profile.public_id !== "id") {
+            try {
+                await cloudinary.uploader.destroy(user.profile.public_id);
+            } catch (err) {
+                console.error("Error deleting avatar on user delete:", err);
+            }
+        }
 
-        // 3. إرسال رد النجاح
+        await User.findByIdAndDelete(userId);
+
         return res.status(200).json({
             success: true,
             message: "User deleted successfully"
         });
 
     } catch (error) {
-        // 4. التعامل مع أي خطأ تقني (مثل ID غير صالح)
         return res.status(500).json({
             success: false,
             message: "Error in deleting user profile",

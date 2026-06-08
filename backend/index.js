@@ -14,7 +14,8 @@ import PaymentRouter from './routes/PaymentRoute.js';
 const app = express();
 const PORT = process.env.PORT || 8000;
 app.use(cors({ origin: true, credentials: true }));
-app.use(express.json()); // ضروري جداً لكي يفهم السيرفر بيانات بوست مان
+app.use(express.json({ limit: '50mb' })); // ضروري جداً لكي يفهم السيرفر بيانات بوست مان ويدعم الصور الكبيرة
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(cookieParser()); // ضروري جداً لكي يقرأ السيرفر الكوكيز من المتصفح
 app.use("/api/v1", productRoutes); // سيصبح الرابط: http://localhost:8000/api/v1/product/new
 app.use("/api/v1", userRoutes); // سيصبح الرابط: http://localhost:8000/api/v1/register

@@ -9,8 +9,31 @@ const Profile = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [avatar, setAvatar] = useState("");
+  const [avatarPreview, setAvatarPreview] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  const handleAvatarChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (reader.readyState === 2) {
+          setAvatarPreview(reader.result);
+          setAvatar(reader.result);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  useEffect(() => {
+    if (user && isEditing) {
+      setAvatarPreview(user.profile?.url || "");
+      setAvatar("");
+    }
+  }, [isEditing, user]);
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
@@ -47,8 +70,11 @@ const Profile = () => {
     e.preventDefault();
     setLoading(true);
     try {
-        // Assume backend needs ID in URL based on controller req.params.id
-        const res = await axios.put(`/api/v1/user/update/${user._id}`, { name, email });
+        const updateData = { name, email };
+        if (avatar) {
+            updateData.profile = avatar;
+        }
+        const res = await axios.put(`/api/v1/user/update/${user._id}`, updateData);
         if(res.data?.user) {
             setUser(res.data.user);
             localStorage.setItem("user", JSON.stringify(res.data.user));
@@ -134,6 +160,29 @@ const Profile = () => {
             
             {isEditing ? (
               <form onSubmit={handleUpdate} className="space-y-6 bg-base-200/30 p-6 rounded-2xl border border-base-200">
+                <div className="form-control">
+                  <label className="label">
+                    <span className="label-text font-medium text-base-content">Profile Picture</span>
+                  </label>
+                  <div className="flex items-center gap-4">
+                    <div className="avatar">
+                      <div className="w-16 h-16 rounded-full overflow-hidden border border-base-300 bg-base-100">
+                        <img 
+                          src={avatarPreview || "https://img.daisyui.com/images/stock/photo-1534528741775-53994a69daeb.webp"} 
+                          alt="Avatar Preview" 
+                          className="object-cover w-full h-full"
+                        />
+                      </div>
+                    </div>
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      onChange={handleAvatarChange}
+                      className="file-input file-input-bordered file-input-primary file-input-sm w-full flex-1" 
+                    />
+                  </div>
+                </div>
+
                 <div className="form-control">
                   <label className="label">
                     <span className="label-text font-medium text-base-content">Full Name</span>

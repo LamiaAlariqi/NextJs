@@ -1,21 +1,49 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { toast } from 'react-toastify';
 
 const CartContext = createContext();
 
 export const CartProvider = ({ children }) => {
-  const [cartItems, setCartItems] = useState(() => {
+  const location = useLocation();
+  
+  // Get current user ID
+  const getUserId = () => {
     try {
-      const savedCart = localStorage.getItem('cartItems');
-      return savedCart ? JSON.parse(savedCart) : [];
+      const user = localStorage.getItem('user');
+      return user ? JSON.parse(user)._id : null;
     } catch {
-      return [];
+      return null;
     }
-  });
+  };
 
+  const [userId, setUserId] = useState(getUserId);
+  const [cartItems, setCartItems] = useState([]);
+
+  // Sync user ID state whenever navigation occurs (login/logout triggers redirect)
   useEffect(() => {
-    localStorage.setItem('cartItems', JSON.stringify(cartItems));
-  }, [cartItems]);
+    const currentId = getUserId();
+    if (currentId !== userId) {
+      setUserId(currentId);
+    }
+  }, [location, userId]);
+
+  // Load cart items when userId changes
+  useEffect(() => {
+    const key = userId ? `cartItems_${userId}` : 'cartItems_guest';
+    const savedCart = localStorage.getItem(key);
+    try {
+      setCartItems(savedCart ? JSON.parse(savedCart) : []);
+    } catch {
+      setCartItems([]);
+    }
+  }, [userId]);
+
+  // Save cart items when cartItems or userId changes
+  useEffect(() => {
+    const key = userId ? `cartItems_${userId}` : 'cartItems_guest';
+    localStorage.setItem(key, JSON.stringify(cartItems));
+  }, [cartItems, userId]);
 
   const addToCart = (product, qty = 1) => {
     const user = localStorage.getItem('user');
