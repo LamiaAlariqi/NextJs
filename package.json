@@ -1,0 +1,7 @@
+{
+  "name": "yemen-store-monorepo",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "cd frontend/store && npm install && npm run build"
+  }
+}
