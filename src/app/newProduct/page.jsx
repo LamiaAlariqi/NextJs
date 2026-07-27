@@ -114,13 +114,18 @@ const NewProducts = () => {
               >
                 {/* Image & Actions Overlay */}
                 <div className="h-56 rounded-xl overflow-hidden bg-white/60 dark:bg-muted/30 flex items-center justify-center relative mb-5 p-4 border border-border/10">
+                  {/* Condition Badge */}
+                  <span className="absolute top-3 left-3 z-10 text-[10px] font-bold tracking-wider px-3 py-1 rounded-full bg-background/80 backdrop-blur-md border border-border/60 text-foreground shadow-sm">
+                    {prod.id % 2 === 0 ? "🟢 New" : "🟠 Used - Excellent"}
+                  </span>
+
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={prod.thumbnail}
                     alt={prod.title}
                     className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-500"
                   />
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3 z-20">
                     <Link
                       href={`/newProduct/${prod.id}`}
                       className="bg-card text-card-foreground p-3 rounded-full hover:bg-primary hover:text-primary-foreground transition-colors shadow-lg cursor-pointer flex items-center justify-center"

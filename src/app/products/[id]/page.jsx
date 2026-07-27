@@ -70,17 +70,17 @@ export default function ProductDetails() {
   const [quantity, setQuantity] = useState(1);
 
   const getproductDetails = async (productId) => {
-    const numericId = productId.replace(/^(api-|prod-)/, "");
+    const cleanId = productId.replace(/^(api-|prod-)/, "");
     try {
-      const response = await axios.get(`https://fakestoreapi.com/products/${numericId}`);
+      const response = await axios.get(`/api/products/${cleanId}`);
       console.log("API Response:", response.data);
-      const data = response.data;
+      const data = response.data.product;
       if (!data) return null;
 
       return {
-        id: `api-${data.id}`,
+        id: data._id,
         name: data.title,
-        price: Math.round(data.price),
+        price: Math.round(Number(data.price) || 0),
         category: formatCategoryName(data.category),
         image: data.image,
         description: data.description,

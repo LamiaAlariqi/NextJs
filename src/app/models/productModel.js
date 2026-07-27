@@ -17,6 +17,10 @@
         type:String,
         required:true
      },
+     category:{
+        type:String,
+        required:true
+     },
      stocks:{
         type:Number,
         default:1

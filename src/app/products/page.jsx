@@ -60,17 +60,21 @@ export default function ProductsPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("https://fakestoreapi.com/products");
+      const res = await fetch("/api/products");
       if (!res.ok) {
         throw new Error(`Failed to fetch: ${res.statusText}`);
       }
-      const data = await res.json();
+      const result = await res.json();
+
+      if (!result.success || !result.products) {
+        throw new Error(result.message || "Failed to load products");
+      }
 
       // Map API fields to fit local layout schema
-      const mappedData = data.map((item) => ({
-        id: `api-${item.id}`,
+      const mappedData = result.products.map((item) => ({
+        id: item._id,
         name: item.title,
-        price: Math.round(item.price), // Round price for cleaner design
+        price: Math.round(Number(item.price) || 0),
         category: formatCategoryName(item.category),
         image: item.image,
         description: item.description,

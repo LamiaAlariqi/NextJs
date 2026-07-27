@@ -4,9 +4,12 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCart } from "@/context/CartContext";
+import { useSession, signOut as nextAuthSignOut } from "next-auth/react";
 
 export default function Navbar() {
   const pathname = usePathname();
+  const sessionContext = useSession();
+  const session = sessionContext?.data;
   const {
     cart,
     isCartOpen,
@@ -20,7 +23,7 @@ export default function Navbar() {
 
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [user, setUser] = useState(null);
+  const [localUser, setLocalUser] = useState(null);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -28,12 +31,12 @@ export default function Navbar() {
       const savedUser = localStorage.getItem("aura_user");
       if (savedUser) {
         try {
-          setUser(JSON.parse(savedUser));
+          setLocalUser(JSON.parse(savedUser));
         } catch (e) {
           console.error("Failed to parse user session", e);
         }
       } else {
-        setUser(null);
+        setLocalUser(null);
       }
     };
     checkUser();
@@ -43,11 +46,17 @@ export default function Navbar() {
     };
   }, []);
 
+  const activeUser = session?.user || localUser;
+
   const handleLogout = () => {
     localStorage.removeItem("aura_user");
-    setUser(null);
+    localStorage.removeItem("aura_token");
+    setLocalUser(null);
     setIsUserMenuOpen(false);
     window.dispatchEvent(new Event("aura_login_state_change"));
+    if (session) {
+      nextAuthSignOut();
+    }
   };
 
   const totalItems = cart.reduce((acc, item) => acc + item.quantity, 0);
@@ -66,10 +75,10 @@ export default function Navbar() {
           </Link>
 
           {/* Navigation Links */}
-          <nav className="hidden md:flex items-center gap-8">
+          <nav className="hidden md:flex items-center gap-7">
             <Link
               href="/home"
-              className={`text-sm font-medium tracking-wide transition-colors duration-200 hover:text-primary ${
+              className={`text-xs font-semibold tracking-wider uppercase transition-colors duration-200 hover:text-primary ${
                 pathname === "/home" || pathname === "/" ? "text-primary" : "text-muted-foreground"
               }`}
             >
@@ -77,15 +86,15 @@ export default function Navbar() {
             </Link>
             <Link
               href="/products"
-              className={`text-sm font-medium tracking-wide transition-colors duration-200 hover:text-primary ${
+              className={`text-xs font-semibold tracking-wider uppercase transition-colors duration-200 hover:text-primary ${
                 pathname === "/products" ? "text-primary" : "text-muted-foreground"
               }`}
             >
-              Products
+              Browse Products
             </Link>
             <Link
               href="/newProduct"
-              className={`text-sm font-medium tracking-wide transition-colors duration-200 hover:text-primary ${
+              className={`text-xs font-semibold tracking-wider uppercase transition-colors duration-200 hover:text-primary ${
                 pathname === "/newProduct" ? "text-primary" : "text-muted-foreground"
               }`}
             >
@@ -93,7 +102,7 @@ export default function Navbar() {
             </Link>
             <Link
               href="/about"
-              className={`text-sm font-medium tracking-wide transition-colors duration-200 hover:text-primary ${
+              className={`text-xs font-semibold tracking-wider uppercase transition-colors duration-200 hover:text-primary ${
                 pathname === "/about" ? "text-primary" : "text-muted-foreground"
               }`}
             >
@@ -101,11 +110,27 @@ export default function Navbar() {
             </Link>
             <Link
               href="/contact"
-              className={`text-sm font-medium tracking-wide transition-colors duration-200 hover:text-primary ${
+              className={`text-xs font-semibold tracking-wider uppercase transition-colors duration-200 hover:text-primary ${
                 pathname === "/contact" ? "text-primary" : "text-muted-foreground"
               }`}
             >
               Contact
+            </Link>
+            {(activeUser?.role === "admin" || activeUser?.isAdmin) && (
+              <Link
+                href="/admin"
+                className={`text-xs font-semibold tracking-wider uppercase transition-colors duration-200 hover:text-primary ${
+                  pathname === "/admin" ? "text-primary" : "text-muted-foreground"
+                }`}
+              >
+                Dashboard
+              </Link>
+            )}
+            <Link
+              href="/addProduct"
+              className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 hover:bg-emerald-500 hover:text-white px-3.5 py-1.5 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
+            >
+              <span className="text-sm font-extrabold">+</span> Sell Item
             </Link>
           </nav>
 
@@ -186,33 +211,76 @@ export default function Navbar() {
 
             {/* User Account / Profile */}
             <div className="relative">
-              {user ? (
+              {activeUser ? (
                 <>
                   <button
                     onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                    className="p-2 rounded-full hover:bg-muted/80 text-foreground transition-colors relative flex items-center justify-center cursor-pointer"
+                    className="p-1 rounded-full hover:bg-muted/80 text-foreground transition-colors relative flex items-center justify-center cursor-pointer border border-primary/30"
                     aria-label="User profile"
                   >
-                    <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
+                    {activeUser.image ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={activeUser.image}
+                        alt={activeUser.name || "User Avatar"}
+                        className="w-7 h-7 rounded-full object-cover"
+                      />
+                    ) : (
+                      <svg className="w-5 h-5 text-primary p-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                    )}
                   </button>
                   {isUserMenuOpen && (
                     <div className="absolute right-0 mt-2 w-56 glass border border-border rounded-2xl shadow-xl z-50 p-4 animate-fade-in flex flex-col gap-3">
-                      <div className="px-1 py-0.5">
-                        <p className="text-xs font-semibold text-foreground line-clamp-1">{user.name}</p>
-                        <p className="text-[10px] text-muted-foreground line-clamp-1 mt-0.5">{user.email}</p>
+                      <div className="px-1 py-0.5 flex items-center gap-3">
+                        {activeUser.image && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={activeUser.image}
+                            alt="Avatar"
+                            className="w-9 h-9 rounded-full object-cover border border-primary/40 shrink-0"
+                          />
+                        )}
+                        <div className="overflow-hidden">
+                          <p className="text-xs font-semibold text-foreground truncate">{activeUser.name}</p>
+                          <p className="text-[10px] text-muted-foreground truncate mt-0.5">{activeUser.email}</p>
+                        </div>
                       </div>
                       <div className="h-px bg-border/60 w-full" />
-                      <button
-                        onClick={() => {
-                          alert("Feature simulation: Opening My Orders panel.");
-                          setIsUserMenuOpen(false);
-                        }}
+                      <Link
+                        href="/profile"
+                        onClick={() => setIsUserMenuOpen(false)}
+                        className="text-left text-xs text-muted-foreground hover:text-foreground transition-colors py-1 cursor-pointer"
+                      >
+                        My Profile
+                      </Link>
+                      {(activeUser?.role === "admin" || activeUser?.isAdmin) && (
+                        <Link
+                          href="/admin"
+                          onClick={() => setIsUserMenuOpen(false)}
+                          className="text-left text-xs font-semibold text-purple-400 hover:text-purple-300 transition-colors py-1 flex items-center gap-1.5 cursor-pointer"
+                        >
+                          <svg className="w-3.5 h-3.5 text-purple-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                          </svg>
+                          <span>Admin Dashboard</span>
+                        </Link>
+                      )}
+                      <Link
+                        href="/orders"
+                        onClick={() => setIsUserMenuOpen(false)}
                         className="text-left text-xs text-muted-foreground hover:text-foreground transition-colors py-1 cursor-pointer"
                       >
                         My Orders
-                      </button>
+                      </Link>
+                      <Link
+                        href="/updatePassword"
+                        onClick={() => setIsUserMenuOpen(false)}
+                        className="text-left text-xs text-muted-foreground hover:text-foreground transition-colors py-1 cursor-pointer"
+                      >
+                        Update Password
+                      </Link>
                       <button
                         onClick={handleLogout}
                         className="text-left text-xs text-red-500 hover:text-red-600 transition-colors py-1 font-semibold cursor-pointer"

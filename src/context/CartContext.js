@@ -1,42 +1,89 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 
 const CartContext = createContext(undefined);
 
 export function CartProvider({ children }) {
+  const sessionContext = useSession();
+  const session = sessionContext?.data;
   const [cart, setCart] = useState([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [theme, setTheme] = useState("dark"); // Default to dark theme for premium tech feel
 
-  // Load cart and theme from localStorage on mount
+  // Determine storage key for the current logged-in user
+  const getUserCartKey = () => {
+    if (session?.user?.email) {
+      return `aura_cart_${session.user.email}`;
+    }
+    if (typeof window !== "undefined") {
+      const savedUser = localStorage.getItem("aura_user");
+      if (savedUser) {
+        try {
+          const parsed = JSON.parse(savedUser);
+          if (parsed?.email) {
+            return `aura_cart_${parsed.email}`;
+          }
+        } catch (e) {
+          // fallback
+        }
+      }
+    }
+    return "aura_cart_guest";
+  };
+
+  // Reload user's isolated cart whenever user/session changes
   useEffect(() => {
-    const savedCart = localStorage.getItem("aura_cart");
+    const key = getUserCartKey();
+    const savedCart = localStorage.getItem(key);
     if (savedCart) {
       try {
         setCart(JSON.parse(savedCart));
       } catch (e) {
         console.error("Failed to parse cart data", e);
+        setCart([]);
       }
+    } else {
+      setCart([]);
     }
+  }, [session?.user?.email]);
 
+  // Load theme preference
+  useEffect(() => {
     const savedTheme = localStorage.getItem("aura_theme");
     if (savedTheme) {
       setTheme(savedTheme);
       document.documentElement.className = savedTheme;
     } else {
-      // Check system preference
       const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
       const initialTheme = prefersDark ? "dark" : "light";
       setTheme(initialTheme);
       document.documentElement.className = initialTheme;
     }
+
+    // Listen for custom login state changes
+    const handleLoginChange = () => {
+      const key = getUserCartKey();
+      const saved = localStorage.getItem(key);
+      if (saved) {
+        try { setCart(JSON.parse(saved)); } catch (e) { setCart([]); }
+      } else {
+        setCart([]);
+      }
+    };
+
+    window.addEventListener("aura_login_state_change", handleLoginChange);
+    return () => {
+      window.removeEventListener("aura_login_state_change", handleLoginChange);
+    };
   }, []);
 
-  // Sync cart to localStorage
+  // Sync cart to localStorage under user's specific key
   const saveCartToStorage = (newCart) => {
     setCart(newCart);
-    localStorage.setItem("aura_cart", JSON.stringify(newCart));
+    const key = getUserCartKey();
+    localStorage.setItem(key, JSON.stringify(newCart));
   };
 
   const addToCart = (product) => {

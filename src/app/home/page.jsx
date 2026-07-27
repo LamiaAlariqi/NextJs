@@ -10,6 +10,8 @@ const PRODUCTS = [
     name: "Aura Sound Arc",
     price: 299,
     category: "Audio",
+    condition: "🟢 New",
+    phone: "+967770000000",
     image: "/sound_arc.png",
     description: "Premium wireless over-ear headphones with advanced active noise cancellation, high-fidelity sound, and customizable ambient light accents.",
     specs: ["Active Noise Cancellation", "40-hour Battery Life", "Ambient Glowing Accents", "Spatial Audio Support"]
@@ -19,6 +21,8 @@ const PRODUCTS = [
     name: "Aura Smart Ring",
     price: 199,
     category: "Wearables",
+    condition: "🟠 Used - Like New",
+    phone: "+967770000000",
     image: "/smart_ring.png",
     description: "Ultra-lightweight biometric sensor ring forged in titanium. Automatically tracks sleep, heart rate, and activity with an elegant minimalist design.",
     specs: ["Titanium Shell", "7-day Battery Life", "Waterproof (100m)", "Advanced Bio-Tracking"]
@@ -28,6 +32,8 @@ const PRODUCTS = [
     name: "Aura Beam Projector",
     price: 349,
     category: "Ambient Home",
+    condition: "🟢 New",
+    phone: "+967770000000",
     image: "/aura_beam.png",
     description: "A smart cylindrical ambient light projector that casts soothing color gradients and light fields onto walls to complement your workspace.",
     specs: ["Smart App Integration", "16 Million Colors", "Concrete & Metal Chassis", "Music Sync Mode"]
@@ -37,6 +43,8 @@ const PRODUCTS = [
     name: "Aura Pods Pro",
     price: 149,
     category: "Audio",
+    condition: "🟠 Used - Good",
+    phone: "+967770000000",
     image: "/aura_pods.png",
     description: "Semi-translucent smoke-grey true wireless earbuds featuring crystal-clear high notes, deep bass, and active noise isolation.",
     specs: ["Semi-translucent Design", "IPX4 Sweat Resistant", "Wireless Qi Charging", "Touch Controls"]
@@ -175,17 +183,22 @@ export default function HomePage() {
             {PRODUCTS.slice(0, 3).map((prod) => (
               <div
                 key={prod.id}
-                className="group relative rounded-[2rem] border border-border/40 glass p-5 flex flex-col justify-between hover:border-primary/40 transition-colors duration-300"
+                className="group relative rounded-[2rem] border border-border/40 glass p-5 flex flex-col justify-between hover:border-primary/40 transition-colors duration-300 shadow-sm"
               >
                 {/* Image & Quick View button overlay */}
                 <div className="h-56 rounded-xl overflow-hidden bg-muted/30 flex items-center justify-center relative mb-5">
+                  {/* Condition Badge */}
+                  <span className="absolute top-3 left-3 z-10 text-[10px] font-bold tracking-wider px-3 py-1 rounded-full bg-background/80 backdrop-blur-md border border-border/60 text-foreground shadow-sm">
+                    {prod.condition || "🟢 New"}
+                  </span>
+
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={prod.image}
                     alt={prod.name}
                     className="w-4/5 h-auto object-contain group-hover:scale-105 transition-transform duration-500"
                   />
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3 z-20">
                     <button
                       onClick={() => setQuickViewProduct(prod)}
                       className="bg-card text-card-foreground p-3 rounded-full hover:bg-primary hover:text-primary-foreground transition-colors shadow-lg cursor-pointer"

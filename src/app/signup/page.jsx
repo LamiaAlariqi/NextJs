@@ -22,8 +22,9 @@ export default function SignupPage() {
     setError(""); // Clear error on input change
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
     
     // Validations
     if (!formData.name.trim()) {
@@ -41,23 +42,37 @@ export default function SignupPage() {
 
     setIsSubmitting(true);
 
-    // Simulate signup request
-    setTimeout(() => {
-      setIsSubmitting(false);
+    try {
+      const response = await fetch("/api/users/signup", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          password: formData.password,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || "Failed to create account.");
+      }
+
       setSuccess(true);
-      
-      // Store dummy user credentials in localStorage to simulate registration database
-      localStorage.setItem("aura_registered_user", JSON.stringify({
-        name: formData.name,
-        email: formData.email,
-        password: formData.password
-      }));
 
       // Redirect to login page after short delay
       setTimeout(() => {
         router.push("/Login?signup=success");
       }, 1500);
-    }, 1500);
+    } catch (err) {
+      console.error("Signup error:", err);
+      setError(err.message || "An error occurred during registration. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
