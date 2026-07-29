@@ -25,6 +25,34 @@ export default function Navbar() {
   const [searchQuery, setSearchQuery] = useState("");
   const [localUser, setLocalUser] = useState(null);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
+
+  const handleCheckout = async () => {
+    if (cart.length === 0) return;
+    try {
+      setIsCheckingOut(true);
+      const res = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          items: cart,
+          userEmail: activeUser?.email || "",
+        }),
+      });
+
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        alert(data.error || "Failed to start Stripe checkout");
+        setIsCheckingOut(false);
+      }
+    } catch (err) {
+      console.error("Checkout error", err);
+      alert("Something went wrong during checkout.");
+      setIsCheckingOut(false);
+    }
+  };
 
   useEffect(() => {
     const checkUser = () => {
@@ -458,8 +486,19 @@ export default function Navbar() {
                   Shipping and taxes calculated at checkout. Free shipping on orders over $150.
                 </p>
                 <div className="flex flex-col gap-2">
-                  <button className="w-full bg-primary text-primary-foreground font-semibold py-3 rounded-full hover:opacity-95 transition-opacity text-xs tracking-widest">
-                    PROCEED TO CHECKOUT
+                  <button
+                    onClick={handleCheckout}
+                    disabled={isCheckingOut}
+                    className="w-full bg-primary text-primary-foreground font-semibold py-3 rounded-full hover:opacity-95 transition-opacity text-xs tracking-widest flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  >
+                    {isCheckingOut ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                        <span>PROCESSING...</span>
+                      </>
+                    ) : (
+                      <span>PROCEED TO CHECKOUT (STRIPE)</span>
+                    )}
                   </button>
                   <button
                     onClick={() => setIsCartOpen(false)}

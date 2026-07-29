@@ -62,12 +62,13 @@ const getSpecs = (category, title) => {
 
 export default function ProductDetails() {
   const { id } = useParams();
-  const { addToCart } = useCart();
+  const { addToCartWithQuantity } = useCart();
 
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [quantity, setQuantity] = useState(1);
+  const [isBuying, setIsBuying] = useState(false);
 
   const getproductDetails = async (productId) => {
     const cleanId = productId.replace(/^(api-|prod-)/, "");
@@ -124,8 +125,31 @@ export default function ProductDetails() {
 
   const handleAddToCart = () => {
     if (!product) return;
-    for (let i = 0; i < quantity; i++) {
-      addToCart(product);
+    addToCartWithQuantity(product, quantity);
+  };
+
+  const handleBuyNow = async () => {
+    if (!product) return;
+    try {
+      setIsBuying(true);
+      const res = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          items: [{ ...product, quantity }],
+        }),
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        alert(data.error || "Failed to initiate purchase.");
+        setIsBuying(false);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error initiating purchase");
+      setIsBuying(false);
     }
   };
 
@@ -264,9 +288,24 @@ export default function ProductDetails() {
 
               <button
                 onClick={handleAddToCart}
-                className="flex-1 bg-primary text-primary-foreground font-semibold py-4 px-8 rounded-full hover:opacity-90 transition-opacity text-xs tracking-wider cursor-pointer shadow-lg shadow-primary/20 hover:scale-[1.01] active:scale-[0.99] transition-transform"
+                className="flex-1 bg-secondary text-secondary-foreground font-semibold py-4 px-6 rounded-full hover:opacity-90 transition-opacity text-xs tracking-wider cursor-pointer border border-border shadow-sm hover:scale-[1.01] active:scale-[0.99]"
               >
                 ADD TO CART
+              </button>
+
+              <button
+                onClick={handleBuyNow}
+                disabled={isBuying}
+                className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-4 px-6 rounded-full transition-all text-xs tracking-wider cursor-pointer shadow-lg shadow-emerald-600/20 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {isBuying ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span>BUYING...</span>
+                  </>
+                ) : (
+                  <span>BUY NOW (STRIPE)</span>
+                )}
               </button>
             </div>
 

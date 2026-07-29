@@ -87,17 +87,21 @@ export function CartProvider({ children }) {
   };
 
   const addToCart = (product) => {
+    addToCartWithQuantity(product, 1);
+  };
+
+  const addToCartWithQuantity = (product, qty = 1) => {
     const existingItem = cart.find((item) => item.id === product.id);
     let newCart;
     if (existingItem) {
       newCart = cart.map((item) =>
-        item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
+        item.id === product.id ? { ...item, quantity: item.quantity + qty } : item
       );
     } else {
-      newCart = [...cart, { ...product, quantity: 1 }];
+      newCart = [...cart, { ...product, quantity: qty }];
     }
     saveCartToStorage(newCart);
-    setIsCartOpen(true); // Automatically open cart drawer when adding item
+    setIsCartOpen(true);
   };
 
   const removeFromCart = (productId) => {
@@ -136,6 +140,7 @@ export function CartProvider({ children }) {
         isCartOpen,
         setIsCartOpen,
         addToCart,
+        addToCartWithQuantity,
         removeFromCart,
         removeItemCompletely,
         clearCart,

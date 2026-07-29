@@ -15,7 +15,16 @@ export default function CustomerOrdersPage() {
   };
 
   useEffect(() => {
-    fetch("/api/orders")
+    let emailParam = "";
+    const savedUser = localStorage.getItem("aura_user");
+    if (savedUser) {
+      try {
+        const parsed = JSON.parse(savedUser);
+        if (parsed?.email) emailParam = `?email=${encodeURIComponent(parsed.email)}`;
+      } catch (e) {}
+    }
+
+    fetch(`/api/orders${emailParam}`)
       .then((res) => res.json())
       .then((data) => {
         if (data?.orders) {
