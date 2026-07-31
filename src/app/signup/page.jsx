@@ -58,7 +58,9 @@ export default function SignupPage() {
       const result = await response.json();
 
       if (!response.ok || !result.success) {
-        throw new Error(result.message || "Failed to create account.");
+        setError(result.message || "Failed to create account.");
+        setIsSubmitting(false);
+        return;
       }
 
       setSuccess(true);

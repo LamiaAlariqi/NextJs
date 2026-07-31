@@ -103,7 +103,9 @@ function LoginContent() {
       const result = await response.json();
 
       if (!response.ok || !result.success) {
-        throw new Error(result.message || "Invalid email or password.");
+        setError(result.message || "Invalid email or password.");
+        setIsSubmitting(false);
+        return;
       }
 
       // Save user session details
