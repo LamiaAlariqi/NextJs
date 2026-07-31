@@ -360,16 +360,16 @@ export default function AdminDashboardPage() {
 
           <div className="bg-[#141724] p-6 rounded-3xl border border-[#24293e] flex flex-col justify-between gap-4 shadow-sm hover:border-amber-500/50 transition-colors">
             <div className="flex justify-between items-center text-slate-400">
-              <span className="text-[10px] font-extrabold uppercase tracking-wider">Pending Approvals</span>
+              <span className="text-[10px] font-extrabold uppercase tracking-wider">Completed Store Orders</span>
               <div className="p-2 rounded-xl bg-amber-500/10 text-amber-400">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
                 </svg>
               </div>
             </div>
             <div>
-              <span className="text-2xl lg:text-3xl font-black text-white">{pendingProducts.length} Items</span>
-              <p className="text-[10px] text-amber-400 font-semibold mt-1">Requires Review</p>
+              <span className="text-2xl lg:text-3xl font-black text-white">{adminOrders.length} Orders</span>
+              <p className="text-[10px] text-amber-400 font-semibold mt-1">Stripe Payment Confirmed</p>
             </div>
           </div>
 
