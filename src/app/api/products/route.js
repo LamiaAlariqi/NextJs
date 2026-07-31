@@ -66,10 +66,31 @@ export const GET = async (req) => {
 
     const products = await Product.find(filter).sort({ createdAt: -1 });
 
+    const sanitizedProducts = products.map((p) => {
+      const pObj = p.toObject();
+      const titleLower = (pObj.title || "").toLowerCase();
+      let img = pObj.image || "";
+
+      if (titleLower.includes("iphone7") || titleLower.includes("iphone 7")) {
+        img = "/iphone7.png";
+      } else if (!img || (!img.startsWith("http") && !img.startsWith("/"))) {
+        if (titleLower.includes("bag")) {
+          img = "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=800&auto=format&fit=crop&q=80";
+        } else {
+          img = "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&auto=format&fit=crop&q=80";
+        }
+      }
+
+      return {
+        ...pObj,
+        image: img,
+      };
+    });
+
     return Response.json({
       success: true,
       message: "Products fetched successfully",
-      products
+      products: sanitizedProducts
     }, { status: 200 });
   } catch (error) {
     console.error("Fetch products error:", error);
