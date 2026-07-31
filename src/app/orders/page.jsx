@@ -269,9 +269,9 @@ export default function CustomerOrdersPage() {
                     Purchased Items ({order.items.length})
                   </span>
                   <div className="flex flex-col gap-3">
-                    {order.items.map((item) => (
+                    {order.items.map((item, idx) => (
                       <div
-                        key={item.id}
+                        key={item.id || item._id || idx}
                         className="flex justify-between items-center p-3 rounded-2xl bg-[#1c2134] border border-[#2b324d]"
                       >
                         <div className="flex items-center gap-3">
