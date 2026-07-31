@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, Suspense } from "react";
+import React, { useState, useEffect, useRef, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useCart } from "@/context/CartContext";
@@ -16,6 +16,7 @@ const STANDARD_CATEGORIES = [
 function ProductsContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const categoryScrollRef = useRef(null);
 
   const initialSearch = searchParams.get("search") || searchParams.get("q") || "";
   const initialCategory = searchParams.get("category") || "All";
@@ -28,6 +29,13 @@ function ProductsContent() {
   const [activeCategory, setActiveCategory] = useState(initialCategory);
   const [searchQuery, setSearchQuery] = useState(initialSearch);
   const [quickViewProduct, setQuickViewProduct] = useState(null);
+
+  const scrollCategories = (direction) => {
+    if (categoryScrollRef.current) {
+      const scrollAmount = direction === "left" ? -280 : 280;
+      categoryScrollRef.current.scrollBy({ left: scrollAmount, behavior: "smooth" });
+    }
+  };
 
   // Sync category & search when URL searchParams change
   useEffect(() => {
@@ -149,7 +157,7 @@ function ProductsContent() {
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery("")}
-                className="absolute right-4 text-xs font-semibold text-muted-foreground hover:text-foreground bg-muted px-2 py-1 rounded-full"
+                className="absolute right-4 text-xs font-semibold text-muted-foreground hover:text-foreground bg-muted px-2 py-1 rounded-full cursor-pointer"
               >
                 Clear
               </button>
@@ -158,22 +166,56 @@ function ProductsContent() {
         </div>
       </section>
 
-      {/* Dynamic Category Tabs */}
-      <section className="max-w-7xl mx-auto px-6 pt-10 pb-6">
-        <div className="flex items-center gap-2 overflow-x-auto pb-4 scrollbar-none justify-start md:justify-center">
-          {displayCategories.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => handleCategoryChange(cat)}
-              className={`px-5 py-2.5 rounded-full text-xs font-semibold uppercase tracking-wider transition-all whitespace-nowrap cursor-pointer ${
-                activeCategory.toLowerCase() === cat.toLowerCase()
-                  ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
-                  : "bg-card border border-border/60 text-muted-foreground hover:text-foreground hover:border-primary/40"
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
+      {/* Dynamic Scrollable Category Tabs */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 pt-8 pb-6">
+        <div className="flex items-center gap-2 relative">
+          {/* Scroll Left Button */}
+          <button
+            onClick={() => scrollCategories("left")}
+            className="p-2.5 rounded-full bg-card border border-border/80 text-foreground hover:bg-muted hover:border-primary/50 transition-all shadow-md shrink-0 cursor-pointer hidden sm:flex items-center justify-center"
+            title="Scroll left"
+            aria-label="Scroll left"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+
+          {/* Scrollable Container */}
+          <div
+            ref={categoryScrollRef}
+            className="flex-1 flex items-center gap-2.5 overflow-x-auto pb-3 pt-1 px-1 scroll-smooth scrollbar-thin"
+            style={{
+              scrollbarWidth: "thin",
+              WebkitOverflowScrolling: "touch",
+            }}
+          >
+            {displayCategories.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => handleCategoryChange(cat)}
+                className={`px-5 py-2.5 rounded-full text-xs font-semibold uppercase tracking-wider transition-all whitespace-nowrap cursor-pointer shrink-0 ${
+                  activeCategory.toLowerCase() === cat.toLowerCase()
+                    ? "bg-primary text-primary-foreground shadow-md shadow-primary/20 scale-105"
+                    : "bg-card border border-border/60 text-muted-foreground hover:text-foreground hover:border-primary/40"
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+
+          {/* Scroll Right Button */}
+          <button
+            onClick={() => scrollCategories("right")}
+            className="p-2.5 rounded-full bg-card border border-border/80 text-foreground hover:bg-muted hover:border-primary/50 transition-all shadow-md shrink-0 cursor-pointer hidden sm:flex items-center justify-center"
+            title="Scroll right"
+            aria-label="Scroll right"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
         </div>
       </section>
 
@@ -195,7 +237,7 @@ function ProductsContent() {
             <p className="text-sm text-red-400">{error}</p>
             <button
               onClick={fetchProducts}
-              className="text-xs bg-primary text-primary-foreground font-semibold px-6 py-2.5 rounded-full"
+              className="text-xs bg-primary text-primary-foreground font-semibold px-6 py-2.5 rounded-full cursor-pointer"
             >
               Retry Loading
             </button>
@@ -217,13 +259,13 @@ function ProductsContent() {
                   handleCategoryChange("All");
                   setSearchQuery("");
                 }}
-                className="text-xs bg-muted text-foreground font-semibold px-5 py-2.5 rounded-full border border-border"
+                className="text-xs bg-muted text-foreground font-semibold px-5 py-2.5 rounded-full border border-border cursor-pointer"
               >
                 Reset Filters
               </button>
               <Link
                 href="/addProduct"
-                className="text-xs bg-primary text-primary-foreground font-semibold px-6 py-2.5 rounded-full shadow-md shadow-primary/20"
+                className="text-xs bg-primary text-primary-foreground font-semibold px-6 py-2.5 rounded-full shadow-md shadow-primary/20 cursor-pointer"
               >
                 + Add Item to {activeCategory}
               </Link>
@@ -251,7 +293,7 @@ function ProductsContent() {
 
                   <button
                     onClick={() => setQuickViewProduct(product)}
-                    className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-xs font-semibold text-white tracking-widest uppercase backdrop-blur-xs"
+                    className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-xs font-semibold text-white tracking-widest uppercase backdrop-blur-xs cursor-pointer"
                   >
                     Quick View
                   </button>
@@ -299,7 +341,7 @@ function ProductsContent() {
           >
             <button
               onClick={() => setQuickViewProduct(null)}
-              className="absolute top-4 right-4 text-muted-foreground hover:text-foreground p-1"
+              className="absolute top-4 right-4 text-muted-foreground hover:text-foreground p-1 cursor-pointer"
             >
               ✕
             </button>
@@ -322,7 +364,7 @@ function ProductsContent() {
                     addToCart(quickViewProduct);
                     setQuickViewProduct(null);
                   }}
-                  className="bg-primary text-primary-foreground font-semibold px-6 py-3 rounded-full text-xs shadow-lg shadow-primary/20"
+                  className="bg-primary text-primary-foreground font-semibold px-6 py-3 rounded-full text-xs shadow-lg shadow-primary/20 cursor-pointer"
                 >
                   ADD TO CART
                 </button>
