@@ -1,55 +1,48 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, use } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
 import { useCart } from "@/context/CartContext";
 
-// Lightweight custom axios wrapper around native fetch to maintain original code pattern
-// without requiring installing external packages.
-const axios = {
-  get: async (url) => {
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`Request failed with status ${response.status}`);
-    }
-    const data = await response.json();
-    return { data };
-  }
-};
+const CATEGORIES = [
+  { name: "Electronics", href: "/products?category=Electronics" },
+  { name: "Furniture", href: "/products?category=Furniture" },
+  { name: "Cars", href: "/products?category=Cars" },
+  { name: "Makeup & Beauty", href: "/products?category=Makeup%20%26%20Beauty" },
+  { name: "Clothing & Fashion", href: "/products?category=Clothing%20%26%20Fashion" },
+];
 
-const formatCategoryName = (cat) => {
-  if (!cat) return "";
-  return cat
-    .split(" ")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
-};
+function formatCategoryName(category) {
+  if (!category) return "General";
+  return category;
+}
 
-const getSpecs = (category, title) => {
-  const catLower = category ? category.toLowerCase() : "";
-  if (catLower.includes("electronics")) {
+function getSpecs(category, title) {
+  const cat = (category || "").toLowerCase();
+  const t = (title || "").toLowerCase();
+
+  if (cat.includes("electronics") || t.includes("macbook") || t.includes("sony") || t.includes("iphone")) {
     return [
-      "High-performance components",
-      "Premium build & chassis",
-      "1-Year warranty included",
-      "Smart device compatibility"
+      "Ultra-high precision build",
+      "Next-gen processing architecture",
+      "Extended battery efficiency",
+      "2-Year International Warranty"
     ];
   }
-  if (catLower.includes("jewelery")) {
+  if (cat.includes("furniture") || t.includes("sofa") || t.includes("table") || t.includes("lamp")) {
     return [
-      "Handcrafted details",
-      "Scratch-resistant finish",
-      "Premium protective packaging",
-      "Authentic materials certified"
+      "Handcrafted premium materials",
+      "Ergonomic modern design",
+      "Eco-friendly sustainable finish",
+      "Easy assembly & maintenance"
     ];
   }
-  if (catLower.includes("clothing")) {
+  if (cat.includes("cars") || t.includes("porsche") || t.includes("g63") || t.includes("tesla")) {
     return [
-      "Tailored modern fit",
-      "Ultra-comfortable feel",
-      "Premium fabric blend",
-      "Machine washable & durable"
+      "High-output performance powertrain",
+      "Luxurious leather interior",
+      "Advanced driver assistance suite",
+      "Full service history included"
     ];
   }
   return [
@@ -58,33 +51,47 @@ const getSpecs = (category, title) => {
     "High durability rating",
     "Designed for everyday utility"
   ];
-};
+}
 
-export default function ProductDetails() {
-  const { id } = useParams();
+export default function ProductDetailPage({ params }) {
+  const unwrappedParams = use(params);
+  const productId = unwrappedParams.id;
+
   const { addToCartWithQuantity } = useCart();
-
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [quantity, setQuantity] = useState(1);
   const [isBuying, setIsBuying] = useState(false);
+  const [stockMessage, setStockMessage] = useState("");
 
-  const getproductDetails = async (productId) => {
-    const cleanId = productId.replace(/^(api-|prod-)/, "");
+  const getproductDetails = async (id) => {
     try {
-      const response = await axios.get(`/api/products/${cleanId}`);
-      console.log("API Response:", response.data);
-      const data = response.data.product;
-      if (!data) return null;
+      const res = await fetch(`/api/products/${id}`);
+      if (!res.ok) return null;
+      const result = await res.json();
+      if (!result.success || !result.product) return null;
+
+      const data = result.product;
+      let img = data.image || "";
+      if (data.title?.toLowerCase().includes("iphone") || img.toLowerCase().includes("iphone")) {
+        img = "/iphone7.png";
+      } else if (data.title?.toLowerCase().includes("bag") || img.toLowerCase().includes("bag")) {
+        img = "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=800&auto=format&fit=crop&q=80";
+      } else if (!img || (!img.startsWith("http") && !img.startsWith("/"))) {
+        img = "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&auto=format&fit=crop&q=80";
+      }
+
+      const availableStock = Number(data.stocks) >= 0 ? Number(data.stocks) : 10;
 
       return {
         id: data._id,
         name: data.title,
         price: Math.round(Number(data.price) || 0),
         category: formatCategoryName(data.category),
-        image: data.image,
+        image: img,
         description: data.description,
+        stocks: availableStock,
         specs: getSpecs(data.category, data.title)
       };
     } catch (error) {
@@ -94,11 +101,11 @@ export default function ProductDetails() {
   };
 
   useEffect(() => {
-    if (!id) return;
+    if (!productId) return;
 
     let active = true;
     const fetchProduct = async () => {
-      const data = await getproductDetails(id);
+      const data = await getproductDetails(productId);
       if (!active) return;
       if (data) {
         setProduct(data);
@@ -113,23 +120,32 @@ export default function ProductDetails() {
     return () => {
       active = false;
     };
-  }, [id]);
+  }, [productId]);
 
   const handleQuantityChange = (type) => {
+    if (!product) return;
+    const maxStock = product.stocks;
+
     if (type === "increase") {
-      setQuantity((prev) => prev + 1);
+      if (quantity < maxStock) {
+        setQuantity((prev) => prev + 1);
+        setStockMessage("");
+      } else {
+        setStockMessage(`Maximum available quantity is ${maxStock}`);
+      }
     } else if (type === "decrease" && quantity > 1) {
       setQuantity((prev) => prev - 1);
+      setStockMessage("");
     }
   };
 
   const handleAddToCart = () => {
-    if (!product) return;
+    if (!product || product.stocks <= 0) return;
     addToCartWithQuantity(product, quantity);
   };
 
   const handleBuyNow = async () => {
-    if (!product) return;
+    if (!product || product.stocks <= 0) return;
     try {
       setIsBuying(true);
       const res = await fetch("/api/checkout", {
@@ -163,80 +179,76 @@ export default function ProductDetails() {
 
   if (error || !product) {
     return (
-      <div className="flex flex-col items-center justify-center text-center py-32 px-6">
-        <span className="text-5xl mb-4">🔍</span>
-        <h3 className="text-xl font-bold">Product Not Found</h3>
-        <p className="text-sm text-muted-foreground mt-2 max-w-xs">
-          The product you are looking for might have been removed or is temporarily unavailable.
-        </p>
-        <Link
-          href="/products"
-          className="mt-8 bg-primary text-primary-foreground font-semibold px-8 py-3 rounded-full hover:opacity-90 transition-opacity text-xs tracking-wider"
-        >
-          BACK TO PRODUCTS
+      <div className="flex flex-col items-center justify-center text-center py-32 px-6 gap-4">
+        <h2 className="text-2xl font-bold text-foreground">Product Not Found</h2>
+        <p className="text-xs text-muted-foreground">The product you are looking for does not exist or has been removed.</p>
+        <Link href="/products" className="bg-primary text-primary-foreground text-xs font-semibold px-6 py-3 rounded-full">
+          Back to Products
         </Link>
       </div>
     );
   }
 
+  const isOutOfStock = product.stocks <= 0;
+
   return (
-    <main className="flex-1 bg-background text-foreground transition-colors duration-300 py-12 px-6 relative overflow-hidden">
-      {/* Decorative ambient background glows */}
-      <div className="absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] md:w-[500px] md:h-[500px] bg-primary/5 rounded-full blur-[120px] -z-10 pointer-events-none" />
-      <div className="absolute bottom-1/4 right-1/4 translate-x-1/2 translate-y-1/2 w-[250px] h-[250px] md:w-[400px] md:h-[400px] bg-secondary/5 rounded-full blur-[120px] -z-10 pointer-events-none" />
+    <main className="flex-1 bg-background text-foreground min-h-screen pb-24 pt-8">
+      <div className="max-w-7xl mx-auto px-6">
+        {/* Back Link */}
+        <Link
+          href="/products"
+          className="inline-flex items-center gap-2 text-xs font-semibold tracking-wider text-muted-foreground hover:text-foreground mb-8 transition-colors uppercase"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          Back to collection
+        </Link>
 
-      <div className="max-w-6xl mx-auto flex flex-col gap-10">
-        {/* Breadcrumbs / Back button */}
-        <div className="flex items-center justify-between border-b border-border/20 pb-4 animate-fade-in">
-          <Link
-            href="/products"
-            className="group flex items-center gap-2 text-xs font-semibold tracking-wider text-muted-foreground hover:text-foreground transition-colors uppercase"
-          >
-            <svg
-              className="w-4 h-4 transform group-hover:-translate-x-0.5 transition-transform"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-            Back to Collection
-          </Link>
-          <span className="text-[10px] font-bold text-muted-foreground/60 tracking-[0.2em] uppercase">
-            Aura Premium Selection
-          </span>
-        </div>
-
-        {/* Product Layout Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-start">
-          {/* Left: Product Image Showcase */}
-          <div className="lg:col-span-6 flex justify-center w-full animate-fade-in-delay-1">
-            <div className="relative group w-full max-w-[500px]">
-              <div className="absolute inset-0 bg-gradient-to-tr from-primary/10 to-secondary/10 rounded-[2.5rem] blur-[30px] opacity-45 group-hover:opacity-70 transition-opacity duration-500 -z-10" />
-              <div className="relative glass rounded-[2.5rem] overflow-hidden p-8 sm:p-12 border border-border/40 flex items-center justify-center min-h-[350px] sm:min-h-[480px]">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={product.image}
-                  alt={product.name}
-                  className="max-h-[300px] sm:max-h-[400px] w-auto object-contain group-hover:scale-[1.04] transition-transform duration-700"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Right: Product Details Info */}
-          <div className="lg:col-span-6 flex flex-col gap-8 w-full animate-fade-in-delay-2">
-            <div>
-              <span className="text-[10px] font-bold tracking-[0.25em] text-primary bg-primary/10 px-4 py-1.5 rounded-full uppercase border border-primary/10">
+        {/* Product Details Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
+          {/* Image Column */}
+          <div className="lg:col-span-7">
+            <div className="glass rounded-[2.5rem] border border-border/40 overflow-hidden p-8 sm:p-12 flex items-center justify-center relative bg-muted/20">
+              <span className="absolute top-6 left-6 text-xs font-bold tracking-widest text-primary bg-primary/10 border border-primary/20 backdrop-blur-md px-4 py-1.5 rounded-full uppercase">
                 {product.category}
               </span>
 
-              <h1 className="text-3xl sm:text-4.5xl font-bold tracking-tight mt-5 leading-tight text-foreground">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={product.image}
+                alt={product.name}
+                className="w-full max-h-[500px] object-contain rounded-2xl drop-shadow-2xl"
+              />
+            </div>
+          </div>
+
+          {/* Specs / Controls Column */}
+          <div className="lg:col-span-5 flex flex-col gap-6">
+            <div>
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-[10px] font-bold text-primary bg-primary/10 px-3 py-1 rounded-full uppercase tracking-widest">
+                  {product.category}
+                </span>
+
+                {/* Stock Status Badge */}
+                {isOutOfStock ? (
+                  <span className="text-xs font-bold text-red-400 bg-red-500/10 px-3 py-1 rounded-full border border-red-500/20">
+                    🔴 Out of Stock
+                  </span>
+                ) : (
+                  <span className="text-xs font-semibold text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
+                    🟢 In Stock ({product.stocks} available)
+                  </span>
+                )}
+              </div>
+
+              <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight mt-3 text-foreground">
                 {product.name}
               </h1>
 
-              <div className="flex items-baseline gap-3 mt-4">
-                <span className="text-2xl sm:text-3xl font-extrabold text-foreground">${product.price}</span>
+              <div className="flex items-baseline gap-4 mt-4">
+                <span className="text-3xl font-black text-foreground">${product.price}</span>
                 <span className="text-xs text-muted-foreground">Free Global Delivery</span>
               </div>
             </div>
@@ -267,60 +279,65 @@ export default function ProductDetails() {
               </div>
             )}
 
-            <div className="flex flex-col sm:flex-row gap-4 mt-4 w-full">
-              <div className="flex items-center justify-between border border-border rounded-full py-3 px-5 sm:w-36 gap-6 glass shrink-0">
+            {/* Quantity Selector & Stock Alert */}
+            <div className="flex flex-col gap-2 pt-2">
+              <div className="flex flex-col sm:flex-row gap-4 w-full">
+                <div className="flex items-center justify-between border border-border rounded-full py-3 px-5 sm:w-36 gap-6 glass shrink-0">
+                  <button
+                    onClick={() => handleQuantityChange("decrease")}
+                    disabled={quantity <= 1 || isOutOfStock}
+                    className="text-muted-foreground hover:text-foreground text-sm font-semibold w-8 h-8 flex items-center justify-center transition-colors cursor-pointer select-none disabled:opacity-30"
+                    aria-label="Decrease quantity"
+                  >
+                    —
+                  </button>
+                  <span className="text-sm font-bold text-foreground select-none w-4 text-center">{quantity}</span>
+                  <button
+                    onClick={() => handleQuantityChange("increase")}
+                    disabled={quantity >= product.stocks || isOutOfStock}
+                    className="text-muted-foreground hover:text-foreground text-sm font-semibold w-8 h-8 flex items-center justify-center transition-colors cursor-pointer select-none disabled:opacity-30"
+                    aria-label="Increase quantity"
+                  >
+                    +
+                  </button>
+                </div>
+
                 <button
-                  onClick={() => handleQuantityChange("decrease")}
-                  className="text-muted-foreground hover:text-foreground text-sm font-semibold w-8 h-8 flex items-center justify-center transition-colors cursor-pointer select-none"
-                  aria-label="Decrease quantity"
+                  onClick={handleAddToCart}
+                  disabled={isOutOfStock}
+                  className="flex-1 bg-secondary text-secondary-foreground font-semibold py-4 px-6 rounded-full hover:opacity-90 transition-opacity text-xs tracking-wider cursor-pointer border border-border shadow-sm hover:scale-[1.01] active:scale-[0.99] disabled:opacity-40"
                 >
-                  —
+                  {isOutOfStock ? "OUT OF STOCK" : "ADD TO CART"}
                 </button>
-                <span className="text-sm font-bold text-foreground select-none w-4 text-center">{quantity}</span>
+
                 <button
-                  onClick={() => handleQuantityChange("increase")}
-                  className="text-muted-foreground hover:text-foreground text-sm font-semibold w-8 h-8 flex items-center justify-center transition-colors cursor-pointer select-none"
-                  aria-label="Increase quantity"
+                  onClick={handleBuyNow}
+                  disabled={isBuying || isOutOfStock}
+                  className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-4 px-6 rounded-full transition-all text-xs tracking-wider cursor-pointer shadow-lg shadow-emerald-600/20 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-40 flex items-center justify-center gap-2"
                 >
-                  +
+                  {isBuying ? "PROCESSING..." : isOutOfStock ? "UNAVAILABLE" : "BUY NOW (STRIPE)"}
                 </button>
               </div>
 
-              <button
-                onClick={handleAddToCart}
-                className="flex-1 bg-secondary text-secondary-foreground font-semibold py-4 px-6 rounded-full hover:opacity-90 transition-opacity text-xs tracking-wider cursor-pointer border border-border shadow-sm hover:scale-[1.01] active:scale-[0.99]"
-              >
-                ADD TO CART
-              </button>
-
-              <button
-                onClick={handleBuyNow}
-                disabled={isBuying}
-                className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-4 px-6 rounded-full transition-all text-xs tracking-wider cursor-pointer shadow-lg shadow-emerald-600/20 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                {isBuying ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    <span>BUYING...</span>
-                  </>
-                ) : (
-                  <span>BUY NOW (STRIPE)</span>
-                )}
-              </button>
+              {stockMessage && (
+                <p className="text-xs text-amber-400 font-medium pl-2 animate-fade-in">
+                  ⚠️ {stockMessage}
+                </p>
+              )}
             </div>
 
-            <div className="grid grid-cols-3 gap-2 text-center py-2.5 border-t border-b border-border/20 mt-2 text-[10px] tracking-wider text-muted-foreground font-medium uppercase">
-              <div className="flex flex-col gap-1 items-center justify-center">
-                <span>🛡️ 2-Year Warranty</span>
+            {/* Guarantees */}
+            <div className="grid grid-cols-3 gap-2 pt-4 border-t border-border/30 text-center">
+              <div className="flex flex-col items-center gap-1">
+                <span className="text-[10px] text-muted-foreground font-medium">🛡️ 2-Year Warranty</span>
               </div>
-              <div className="flex flex-col gap-1 items-center justify-center border-l border-r border-border/20">
-                <span>🔄 30-Day Returns</span>
+              <div className="flex flex-col items-center gap-1">
+                <span className="text-[10px] text-muted-foreground font-medium">🔄 30-Day Returns</span>
               </div>
-              <div className="flex flex-col gap-1 items-center justify-center">
-                <span>💬 24/7 Premium Support</span>
+              <div className="flex flex-col items-center gap-1">
+                <span className="text-[10px] text-muted-foreground font-medium">💬 24/7 Support</span>
               </div>
             </div>
-
           </div>
         </div>
       </div>
