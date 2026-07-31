@@ -1,66 +1,41 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useCart } from "@/context/CartContext";
 
-const PRODUCTS = [
-  {
-    id: "prod-1",
-    name: "Aura Sound Arc",
-    price: 299,
-    category: "Audio",
-    condition: "🟢 New",
-    phone: "+967770000000",
-    image: "/sound_arc.png",
-    description: "Premium wireless over-ear headphones with advanced active noise cancellation, high-fidelity sound, and customizable ambient light accents.",
-    specs: ["Active Noise Cancellation", "40-hour Battery Life", "Ambient Glowing Accents", "Spatial Audio Support"]
-  },
-  {
-    id: "prod-2",
-    name: "Aura Smart Ring",
-    price: 199,
-    category: "Wearables",
-    condition: "🟠 Used - Like New",
-    phone: "+967770000000",
-    image: "/smart_ring.png",
-    description: "Ultra-lightweight biometric sensor ring forged in titanium. Automatically tracks sleep, heart rate, and activity with an elegant minimalist design.",
-    specs: ["Titanium Shell", "7-day Battery Life", "Waterproof (100m)", "Advanced Bio-Tracking"]
-  },
-  {
-    id: "prod-3",
-    name: "Aura Beam Projector",
-    price: 349,
-    category: "Ambient Home",
-    condition: "🟢 New",
-    phone: "+967770000000",
-    image: "/aura_beam.png",
-    description: "A smart cylindrical ambient light projector that casts soothing color gradients and light fields onto walls to complement your workspace.",
-    specs: ["Smart App Integration", "16 Million Colors", "Concrete & Metal Chassis", "Music Sync Mode"]
-  },
-  {
-    id: "prod-4",
-    name: "Aura Pods Pro",
-    price: 149,
-    category: "Audio",
-    condition: "🟠 Used - Good",
-    phone: "+967770000000",
-    image: "/aura_pods.png",
-    description: "Semi-translucent smoke-grey true wireless earbuds featuring crystal-clear high notes, deep bass, and active noise isolation.",
-    specs: ["Semi-translucent Design", "IPX4 Sweat Resistant", "Wireless Qi Charging", "Touch Controls"]
-  }
-];
-
 const CATEGORIES = [
-  { name: "Audio", count: "2 Products", image: "/sound_arc.png", href: "#products" },
-  { name: "Wearables", count: "1 Product", image: "/smart_ring.png", href: "#products" },
-  { name: "Ambient Home", count: "1 Product", image: "/aura_beam.png", href: "#products" }
+  { name: "Electronics", count: "Latest Tech & Gadgets", image: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=800&auto=format&fit=crop&q=80", href: "/products?category=Electronics" },
+  { name: "Furniture", count: "Luxury Living & Decor", image: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=800&auto=format&fit=crop&q=80", href: "/products?category=Furniture" },
+  { name: "Cars", count: "Supercars & Automotive", image: "https://images.unsplash.com/photo-1617814076367-b759c7d7e738?w=800&auto=format&fit=crop&q=80", href: "/products?category=Cars" },
 ];
 
 export default function HomePage() {
   const { addToCart } = useCart();
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [quickViewProduct, setQuickViewProduct] = useState(null);
+
+  useEffect(() => {
+    fetch("/api/products")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.products) {
+          const mapped = data.products.slice(0, 8).map((p) => ({
+            id: p._id,
+            name: p.title,
+            price: Math.round(Number(p.price) || 0),
+            category: p.category,
+            image: p.image,
+            description: p.description,
+          }));
+          setProducts(mapped);
+        }
+      })
+      .catch((e) => console.error("Failed to load home products", e))
+      .finally(() => setLoading(false));
+  }, []);
 
   return (
     <>
@@ -179,8 +154,8 @@ export default function HomePage() {
             <div className="w-12 h-1 bg-primary rounded-full mt-4" />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            {PRODUCTS.slice(0, 3).map((prod) => (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 max-w-7xl mx-auto">
+            {products.slice(0, 4).map((prod) => (
               <div
                 key={prod.id}
                 className="group relative rounded-[2rem] border border-border/40 glass p-5 flex flex-col justify-between hover:border-primary/40 transition-colors duration-300 shadow-sm"
@@ -312,8 +287,8 @@ export default function HomePage() {
               <div className="flex items-center gap-6 mt-2">
                 <span className="text-2xl font-bold text-foreground">$349</span>
                 <button
-                  onClick={() => addToCart(PRODUCTS[2])}
-                  className="bg-primary text-primary-foreground font-semibold px-8 py-3.5 rounded-full hover:opacity-90 transition-opacity text-xs tracking-wider"
+                  onClick={() => products[0] && addToCart(products[0])}
+                  className="bg-primary text-primary-foreground font-semibold px-8 py-3.5 rounded-full hover:opacity-90 transition-opacity text-xs tracking-wider cursor-pointer"
                 >
                   ACQUIRE NOW
                 </button>
