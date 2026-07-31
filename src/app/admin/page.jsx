@@ -351,8 +351,10 @@ export default function AdminDashboardPage() {
               </div>
             </div>
             <div>
-              <span className="text-2xl lg:text-3xl font-black text-white">$14,850</span>
-              <p className="text-[10px] text-emerald-400 font-semibold mt-1">↑ +14.2% Growth</p>
+              <span className="text-2xl lg:text-3xl font-black text-white">
+                ${approvedProducts.reduce((acc, p) => acc + (Number(p.price) || 0) * (Number(p.stocks) || 1), 0).toLocaleString()}
+              </span>
+              <p className="text-[10px] text-emerald-400 font-semibold mt-1">● Live Inventory Total</p>
             </div>
           </div>
 
