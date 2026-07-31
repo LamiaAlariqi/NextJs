@@ -1,6 +1,5 @@
 import connection from "@/app/db/conn";
 import Product from "@/app/models/productModel";
-import { INITIAL_PRODUCTS } from "./seed/route";
 
 // Create products controller
 export const POST = async (req) => {
@@ -44,18 +43,6 @@ export const GET = async (req) => {
 
     const category = searchParams.get("category");
     const searchQuery = searchParams.get("search") || searchParams.get("q");
-
-    // Auto-seed database if zero products exist
-    let count = await Product.countDocuments();
-    if (count === 0) {
-      await Product.insertMany(INITIAL_PRODUCTS);
-    }
-
-    // Update any existing iphone7 products in DB to use /iphone7.png if broken
-    await Product.updateMany(
-      { title: { $regex: /iphone\s*7/i }, $or: [{ image: { $exists: false } }, { image: "" }, { image: { $regex: /^ip/i } }] },
-      { $set: { image: "/iphone7.png" } }
-    );
 
     let filter = {};
 
