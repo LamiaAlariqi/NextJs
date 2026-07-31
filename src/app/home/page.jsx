@@ -26,8 +26,10 @@ export default function HomePage() {
             let img = p.image || "";
             if (p.title?.toLowerCase().includes("iphone") || img.toLowerCase().includes("iphone")) {
               img = "/iphone7.png";
-            } else if (!img.startsWith("http") && !img.startsWith("/")) {
-              img = `/${img}`;
+            } else if (p.title?.toLowerCase().includes("bag") || img.toLowerCase().includes("bag")) {
+              img = "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=800&auto=format&fit=crop&q=80";
+            } else if (!img || (!img.startsWith("http") && !img.startsWith("/"))) {
+              img = "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&auto=format&fit=crop&q=80";
             }
             return {
               id: p._id,
