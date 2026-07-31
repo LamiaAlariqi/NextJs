@@ -374,17 +374,19 @@ export default function HomePage() {
                 </div>
                 <p className="text-xs text-muted-foreground leading-relaxed">{quickViewProduct.description}</p>
                 
-                <div>
-                  <h4 className="text-[10px] font-bold uppercase tracking-wider mb-2 text-foreground">Specifications</h4>
-                  <ul className="grid grid-cols-2 gap-2">
-                    {quickViewProduct.specs.map((spec, idx) => (
-                      <li key={idx} className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <div className="w-1 h-1 rounded-full bg-primary" />
-                        {spec}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+                {quickViewProduct.specs && quickViewProduct.specs.length > 0 && (
+                  <div>
+                    <h4 className="text-[10px] font-bold uppercase tracking-wider mb-2 text-foreground">Specifications</h4>
+                    <ul className="grid grid-cols-2 gap-2">
+                      {quickViewProduct.specs.map((spec, idx) => (
+                        <li key={idx} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <div className="w-1 h-1 rounded-full bg-primary" />
+                          {spec}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
 
                 <div className="flex gap-4 mt-2">
                   <button
