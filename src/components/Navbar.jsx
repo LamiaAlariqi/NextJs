@@ -2,12 +2,13 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useCart } from "@/context/CartContext";
 import { useSession, signOut as nextAuthSignOut } from "next-auth/react";
 
 export default function Navbar() {
   const pathname = usePathname();
+  const router = useRouter();
   const sessionContext = useSession();
   const session = sessionContext?.data;
   const {
@@ -186,7 +187,16 @@ export default function Navbar() {
                 </svg>
               </button>
               {isSearchOpen && (
-                <div className="absolute right-10 top-1/2 -translate-y-1/2 animate-fade-in glass rounded-full px-4 py-1 border border-border flex items-center w-48 md:w-64">
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    if (searchQuery.trim()) {
+                      router.push(`/products?search=${encodeURIComponent(searchQuery.trim())}`);
+                      setIsSearchOpen(false);
+                    }
+                  }}
+                  className="absolute right-10 top-1/2 -translate-y-1/2 animate-fade-in glass rounded-full px-4 py-1 border border-border flex items-center w-48 md:w-64 z-50"
+                >
                   <input
                     type="text"
                     placeholder="Search Aura products..."
@@ -196,6 +206,7 @@ export default function Navbar() {
                     autoFocus
                   />
                   <button
+                    type="button"
                     onClick={() => {
                       setSearchQuery("");
                       setIsSearchOpen(false);
@@ -206,7 +217,7 @@ export default function Navbar() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </button>
-                </div>
+                </form>
               )}
             </div>
 

@@ -1,66 +1,49 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useCart } from "@/context/CartContext";
 
-// Helper to format category names beautifully
-const formatCategoryName = (cat) => {
-  if (!cat) return "";
-  return cat
-    .split(" ")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
-};
+const CATEGORIES = [
+  "All",
+  "Electronics",
+  "Furniture",
+  "Cars",
+  "Makeup & Beauty",
+  "Clothing & Fashion"
+];
 
-// Helper to generate premium specs based on category
-const getSpecs = (category, title) => {
-  const catLower = category.toLowerCase();
-  if (catLower.includes("electronics")) {
-    return [
-      "High-performance components",
-      "Premium build & chassis",
-      "1-Year warranty included",
-      "Smart device compatibility"
-    ];
-  }
-  if (catLower.includes("jewelery")) {
-    return [
-      "Handcrafted details",
-      "Scratch-resistant finish",
-      "Premium protective packaging",
-      "Authentic materials certified"
-    ];
-  }
-  if (catLower.includes("clothing")) {
-    return [
-      "Tailored modern fit",
-      "Ultra-comfortable feel",
-      "Premium fabric blend",
-      "Machine washable & durable"
-    ];
-  }
-  return [
-    "Minimalist aesthetic design",
-    "Sustainable eco-friendly build",
-    "High durability rating",
-    "Designed for everyday utility"
-  ];
-};
+function ProductsContent() {
+  const searchParams = useSearchParams();
+  const initialSearch = searchParams.get("search") || searchParams.get("q") || "";
+  const initialCategory = searchParams.get("category") || "All";
 
-export default function ProductsPage() {
   const { addToCart } = useCart();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [activeCategory, setActiveCategory] = useState("All");
+  const [activeCategory, setActiveCategory] = useState(initialCategory);
+  const [searchQuery, setSearchQuery] = useState(initialSearch);
   const [quickViewProduct, setQuickViewProduct] = useState(null);
 
   const fetchProducts = async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/products");
+      let url = "/api/products";
+      const params = new URLSearchParams();
+      if (activeCategory && activeCategory !== "All") {
+        params.append("category", activeCategory);
+      }
+      if (searchQuery && searchQuery.trim() !== "") {
+        params.append("search", searchQuery.trim());
+      }
+      if (params.toString()) {
+        url += `?${params.toString()}`;
+      }
+
+      const res = await fetch(url);
       if (!res.ok) {
         throw new Error(`Failed to fetch: ${res.statusText}`);
       }
@@ -70,21 +53,19 @@ export default function ProductsPage() {
         throw new Error(result.message || "Failed to load products");
       }
 
-      // Map API fields to fit local layout schema
       const mappedData = result.products.map((item) => ({
         id: item._id,
         name: item.title,
         price: Math.round(Number(item.price) || 0),
-        category: formatCategoryName(item.category),
+        category: item.category,
         image: item.image,
         description: item.description,
-        specs: getSpecs(item.category, item.title)
       }));
 
       setProducts(mappedData);
     } catch (err) {
       console.error(err);
-      setError("Unable to load collection. Please check your network connection.");
+      setError("Unable to load products. Please check your network connection.");
     } finally {
       setLoading(false);
     }
@@ -92,258 +73,227 @@ export default function ProductsPage() {
 
   useEffect(() => {
     fetchProducts();
-  }, []);
-
-  // Compute categories dynamically from fetched products
-  const categories = ["All", ...new Set(products.map((p) => p.category))];
-
-  const filteredProducts = activeCategory === "All"
-    ? products
-    : products.filter((p) => p.category === activeCategory);
+  }, [activeCategory, searchQuery]);
 
   return (
-    <>
-      <main className="flex-1 bg-background text-foreground transition-colors duration-300 py-16 px-6">
-        {/* Decorative background glow */}
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[350px] h-[350px] bg-primary/10 rounded-full blur-[100px] -z-10 pointer-events-none" />
+    <main className="flex-1 bg-background text-foreground min-h-screen pb-24 transition-colors duration-300">
+      {/* Page Banner Header */}
+      <section className="relative overflow-hidden py-16 px-6 border-b border-border/30 bg-muted/20">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-primary/10 rounded-full blur-[140px] pointer-events-none" />
 
-        <div className="max-w-7xl mx-auto flex flex-col gap-12">
-          {/* Header */}
-          <div className="flex flex-col items-center text-center gap-4 animate-fade-in">
-            <span className="text-xs font-bold tracking-[0.3em] uppercase text-primary bg-primary/10 px-4 py-1.5 rounded-full">
-              Shop Collection
-            </span>
-            <h1 className="text-4xl sm:text-5xl font-bold tracking-tight">
-              Aura <span className="gradient-text font-extrabold">Innovations</span>
-            </h1>
-            <p className="text-xs sm:text-sm text-muted-foreground max-w-md">
-              Explore our line of premium minimalist audio, wearable trackables, and workspace ambient home devices.
-            </p>
-          </div>
+        <div className="max-w-7xl mx-auto flex flex-col items-center text-center gap-4 relative z-10 animate-fade-in">
+          <span className="text-xs font-bold tracking-[0.3em] uppercase text-primary bg-primary/10 px-4 py-1.5 rounded-full border border-primary/20">
+            Aura Marketplace
+          </span>
+          <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight">
+            Explore <span className="gradient-text">Premium Products</span>
+          </h1>
+          <p className="text-xs sm:text-sm text-muted-foreground max-w-xl">
+            Browse our curated collection of Electronics, Luxury Furniture, Supercars, Makeup, and High Fashion.
+          </p>
 
-          {/* Error State */}
-          {error && (
-            <div className="flex flex-col items-center justify-center text-center py-20 animate-fade-in">
-              <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center text-red-500 mb-6 border border-red-500/20">
-                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-              </div>
-              <h3 className="font-bold text-lg text-foreground">Failed to Load Products</h3>
-              <p className="text-xs text-muted-foreground max-w-xs mt-1 mb-8">{error}</p>
+          {/* Search Input Bar */}
+          <div className="w-full max-w-lg mt-4 relative flex items-center">
+            <input
+              type="text"
+              placeholder="Search products by name, category, or description..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-card border border-border/80 focus:border-primary rounded-full px-6 py-3.5 pl-12 text-xs sm:text-sm text-foreground placeholder:text-muted-foreground shadow-lg focus:outline-none transition-all"
+            />
+            <svg
+              className="w-5 h-5 text-muted-foreground absolute left-4 pointer-events-none"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            {searchQuery && (
               <button
-                onClick={fetchProducts}
-                className="bg-primary text-primary-foreground font-semibold px-8 py-3 rounded-full hover:opacity-90 transition-opacity text-xs tracking-wider cursor-pointer"
+                onClick={() => setSearchQuery("")}
+                className="absolute right-4 text-xs font-semibold text-muted-foreground hover:text-foreground bg-muted px-2 py-1 rounded-full"
               >
-                TRY AGAIN
+                Clear
               </button>
-            </div>
-          )}
-
-          {/* Category Filter Bar */}
-          {!error && (
-            <div className="flex justify-center items-center gap-2 md:gap-4 flex-wrap animate-fade-in-delay-1">
-              {loading
-                ? // Category buttons skeleton
-                Array.from({ length: 4 }).map((_, idx) => (
-                  <div
-                    key={idx}
-                    className="w-24 h-9 bg-muted/40 rounded-full animate-pulse"
-                  />
-                ))
-                : categories.map((cat) => (
-                  <button
-                    key={cat}
-                    onClick={() => setActiveCategory(cat)}
-                    className={`text-xs font-semibold px-6 py-2.5 rounded-full border transition-all duration-300 cursor-pointer ${activeCategory === cat
-                      ? "bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/20 scale-105"
-                      : "border-border/60 hover:border-primary/40 hover:bg-muted/30 text-muted-foreground hover:text-foreground"
-                      }`}
-                  >
-                    {cat}
-                  </button>
-                ))}
-            </div>
-          )}
-
-          {/* Products Grid */}
-          {!error && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 min-h-[400px] animate-fade-in-delay-2">
-              {loading
-                ? // Shimmer Loader Skeleton Grid
-                Array.from({ length: 8 }).map((_, idx) => (
-                  <div
-                    key={idx}
-                    className="rounded-[2rem] border border-border/40 glass p-5 flex flex-col justify-between"
-                  >
-                    <div>
-                      {/* Image Placeholder */}
-                      <div className="h-56 rounded-xl bg-muted/40 animate-pulse mb-5" />
-                      {/* Title Bar */}
-                      <div className="h-4 w-3/4 bg-muted/40 rounded animate-pulse mb-2" />
-                      {/* Category Bar */}
-                      <div className="h-3 w-1/2 bg-muted/40 rounded animate-pulse mb-4" />
-                    </div>
-                    {/* Button Placeholder */}
-                    <div className="h-10 bg-muted/40 rounded-xl animate-pulse" />
-                  </div>
-                ))
-                : filteredProducts.length === 0
-                  ? (
-                    <div className="col-span-full flex flex-col items-center justify-center text-center py-20">
-                      <span className="text-4xl mb-4">🔍</span>
-                      <h3 className="font-semibold">No products found</h3>
-                      <p className="text-xs text-muted-foreground mt-1">We are working on bringing more items to this category.</p>
-                    </div>
-                  )
-                  : filteredProducts.map((prod) => (
-                    <div
-                      key={prod.id}
-                      className="group relative rounded-[2rem] border border-border/40 glass p-5 flex flex-col justify-between hover:border-primary/40 transition-colors duration-300 animate-fade-in"
-                    >
-                      {/* Image & Hover Action Overlay */}
-                      <div className="h-56 rounded-xl overflow-hidden bg-white/60 dark:bg-muted/30 flex items-center justify-center relative mb-5 p-4 border border-border/10">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={prod.image}
-                          alt={prod.name}
-                          className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-500"
-                        />
-                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
-                          <button
-                            onClick={() => setQuickViewProduct(prod)}
-                            className="bg-card text-card-foreground p-3 rounded-full hover:bg-primary hover:text-primary-foreground transition-colors shadow-lg cursor-pointer"
-                            title="Quick View"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                            </svg>
-                          </button>
-                          <Link
-                            href={`/products/${prod.id}`}
-                            className="bg-card text-card-foreground p-3 rounded-full hover:bg-primary hover:text-primary-foreground transition-colors shadow-lg cursor-pointer flex items-center justify-center"
-                            title="View Details"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                            </svg>
-                          </Link>
-                          <button
-                            onClick={() => addToCart(prod)}
-                            className="bg-primary text-primary-foreground p-3 rounded-full hover:opacity-95 transition-opacity shadow-lg cursor-pointer"
-                            title="Add to Cart"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                            </svg>
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Details */}
-                      <div>
-                        <div className="flex justify-between items-start mb-1.5 gap-2">
-                          <h3 className="text-sm font-semibold text-foreground line-clamp-1 flex-1 hover:text-primary transition-colors">
-                            <Link href={`/products/${prod.id}`}>{prod.name}</Link>
-                          </h3>
-                          <span className="text-sm font-bold text-foreground shrink-0">${prod.price}</span>
-                        </div>
-                        <p className="text-xs text-muted-foreground">{prod.category}</p>
-                      </div>
-
-                      {/* Add to Cart Button */}
-                      <div className="mt-4 flex gap-2">
-                        <button
-                          onClick={() => addToCart(prod)}
-                          className="flex-1 text-center bg-primary text-primary-foreground font-semibold py-2.5 rounded-xl hover:opacity-90 transition-opacity text-xs tracking-wider cursor-pointer"
-                        >
-                          ADD TO CART
-                        </button>
-                      </div>
-                    </div>
-                  ))
-              }
-            </div>
-          )}
+            )}
+          </div>
         </div>
-      </main>
+      </section>
+
+      {/* Category Tabs */}
+      <section className="max-w-7xl mx-auto px-6 pt-10 pb-6">
+        <div className="flex items-center gap-2 overflow-x-auto pb-4 scrollbar-none justify-start md:justify-center">
+          {CATEGORIES.map((cat) => (
+            <button
+              key={cat}
+              onClick={() => setActiveCategory(cat)}
+              className={`px-5 py-2.5 rounded-full text-xs font-semibold uppercase tracking-wider transition-all whitespace-nowrap cursor-pointer ${
+                activeCategory === cat
+                  ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
+                  : "bg-card border border-border/60 text-muted-foreground hover:text-foreground hover:border-primary/40"
+              }`}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {/* Product Grid */}
+      <section className="max-w-7xl mx-auto px-6 py-4">
+        {loading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
+              <div key={n} className="glass rounded-3xl p-4 border border-border/40 animate-pulse flex flex-col gap-4">
+                <div className="w-full h-56 bg-muted/60 rounded-2xl" />
+                <div className="h-4 bg-muted/80 rounded w-3/4" />
+                <div className="h-3 bg-muted/60 rounded w-1/2" />
+                <div className="h-10 bg-muted rounded-full mt-2" />
+              </div>
+            ))}
+          </div>
+        ) : error ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center gap-4">
+            <p className="text-sm text-red-400">{error}</p>
+            <button
+              onClick={fetchProducts}
+              className="text-xs bg-primary text-primary-foreground font-semibold px-6 py-2.5 rounded-full"
+            >
+              Retry Loading
+            </button>
+          </div>
+        ) : products.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-24 text-center gap-4">
+            <div className="p-5 bg-muted/40 rounded-full text-muted-foreground">
+              <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-bold text-foreground">No Products Found</h3>
+            <p className="text-xs text-muted-foreground max-w-sm">
+              We couldn't find any products matching your search or selected category.
+            </p>
+            <button
+              onClick={() => {
+                setActiveCategory("All");
+                setSearchQuery("");
+              }}
+              className="text-xs bg-primary text-primary-foreground font-semibold px-6 py-2.5 rounded-full"
+            >
+              Reset Filters
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
+            {products.map((product) => (
+              <div
+                key={product.id}
+                className="group glass rounded-3xl border border-border/40 overflow-hidden flex flex-col justify-between hover:border-primary/40 transition-all duration-300 hover:-translate-y-1 shadow-lg"
+              >
+                {/* Image Container */}
+                <div className="relative h-64 bg-muted/30 overflow-hidden flex items-center justify-center p-4">
+                  <span className="absolute top-3 left-3 z-10 text-[10px] font-bold tracking-widest text-primary bg-primary/10 border border-primary/20 backdrop-blur-md px-3 py-1 rounded-full uppercase">
+                    {product.category}
+                  </span>
+
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={product.image}
+                    alt={product.name}
+                    className="w-full h-full object-cover rounded-2xl group-hover:scale-105 transition-transform duration-500"
+                  />
+
+                  <button
+                    onClick={() => setQuickViewProduct(product)}
+                    className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-xs font-semibold text-white tracking-widest uppercase backdrop-blur-xs"
+                  >
+                    Quick View
+                  </button>
+                </div>
+
+                {/* Details Container */}
+                <div className="p-5 flex flex-col gap-3 flex-1 justify-between">
+                  <div>
+                    <Link
+                      href={`/products/${product.id}`}
+                      className="text-sm font-bold text-foreground hover:text-primary transition-colors line-clamp-1 block"
+                    >
+                      {product.name}
+                    </Link>
+                    <p className="text-xs text-muted-foreground line-clamp-2 mt-1 leading-relaxed">
+                      {product.description}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2 border-t border-border/30 mt-2">
+                    <span className="text-lg font-extrabold text-foreground">${product.price}</span>
+                    <button
+                      onClick={() => addToCart(product)}
+                      className="bg-primary text-primary-foreground font-semibold px-4 py-2 rounded-full text-xs hover:opacity-90 transition-all flex items-center gap-1.5 cursor-pointer shadow-md shadow-primary/20"
+                    >
+                      <span>+ Add to Cart</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
 
       {/* Quick View Modal */}
       {quickViewProduct && (
         <div
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-6"
+          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
           onClick={() => setQuickViewProduct(null)}
         >
           <div
-            className="bg-card text-card-foreground rounded-[2.5rem] border border-border max-w-3xl w-full p-6 sm:p-8 relative animate-fade-in"
+            className="glass max-w-xl w-full border border-border rounded-3xl p-6 shadow-2xl relative flex flex-col md:flex-row gap-6 animate-fade-in"
             onClick={(e) => e.stopPropagation()}
           >
             <button
               onClick={() => setQuickViewProduct(null)}
-              className="absolute right-6 top-6 p-2 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+              className="absolute top-4 right-4 text-muted-foreground hover:text-foreground p-1"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
+              ✕
             </button>
-
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-center mt-4">
-              {/* Image */}
-              <div className="md:col-span-5 bg-white/70 dark:bg-muted/30 border border-border/10 rounded-2xl p-6 flex items-center justify-center max-h-[300px]">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={quickViewProduct.image}
-                  alt={quickViewProduct.name}
-                  className="max-h-[240px] w-auto object-contain"
-                />
+            <div className="w-full md:w-1/2 h-56 md:h-auto bg-muted rounded-2xl overflow-hidden">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={quickViewProduct.image} alt={quickViewProduct.name} className="w-full h-full object-cover" />
+            </div>
+            <div className="flex-1 flex flex-col justify-between gap-4">
+              <div>
+                <span className="text-[10px] font-bold text-primary bg-primary/10 px-3 py-1 rounded-full uppercase">
+                  {quickViewProduct.category}
+                </span>
+                <h3 className="text-xl font-bold text-foreground mt-2">{quickViewProduct.name}</h3>
+                <p className="text-xs text-muted-foreground mt-2 leading-relaxed">{quickViewProduct.description}</p>
               </div>
-
-              {/* Details */}
-              <div className="md:col-span-7 flex flex-col gap-4">
-                <div>
-                  <span className="text-[10px] font-bold text-primary uppercase tracking-[0.2em]">
-                    {quickViewProduct.category}
-                  </span>
-                  <h3 className="text-xl sm:text-2xl font-bold tracking-tight mt-1 leading-snug">{quickViewProduct.name}</h3>
-                  <span className="text-lg font-bold mt-2 block">${quickViewProduct.price}</span>
-                </div>
-                <p className="text-xs text-muted-foreground leading-relaxed max-h-[100px] overflow-y-auto pr-2">{quickViewProduct.description}</p>
-
-                <div>
-                  <h4 className="text-[10px] font-bold uppercase tracking-wider mb-2 text-foreground">Specifications</h4>
-                  <ul className="grid grid-cols-2 gap-2">
-                    {quickViewProduct.specs.map((spec, idx) => (
-                      <li key={idx} className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <div className="w-1 h-1 rounded-full bg-primary" />
-                        {spec}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                <div className="flex gap-4 mt-2">
-                  <button
-                    onClick={() => {
-                      addToCart(quickViewProduct);
-                      setQuickViewProduct(null);
-                    }}
-                    className="flex-1 bg-primary text-primary-foreground font-semibold py-3 rounded-full hover:opacity-90 transition-opacity text-xs tracking-wider cursor-pointer"
-                  >
-                    ADD TO CART
-                  </button>
-                  <button
-                    onClick={() => setQuickViewProduct(null)}
-                    className="border border-border text-foreground hover:bg-muted/50 font-semibold px-6 py-3 rounded-full transition-colors text-xs tracking-wider cursor-pointer"
-                  >
-                    CLOSE
-                  </button>
-                </div>
+              <div className="flex items-center justify-between pt-4 border-t border-border">
+                <span className="text-2xl font-extrabold text-foreground">${quickViewProduct.price}</span>
+                <button
+                  onClick={() => {
+                    addToCart(quickViewProduct);
+                    setQuickViewProduct(null);
+                  }}
+                  className="bg-primary text-primary-foreground font-semibold px-6 py-3 rounded-full text-xs shadow-lg shadow-primary/20"
+                >
+                  ADD TO CART
+                </button>
               </div>
             </div>
           </div>
         </div>
       )}
-    </>
+    </main>
+  );
+}
+
+export default function ProductsPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center text-foreground">Loading...</div>}>
+      <ProductsContent />
+    </Suspense>
   );
 }
