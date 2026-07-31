@@ -22,14 +22,22 @@ export default function HomePage() {
       .then((res) => res.json())
       .then((data) => {
         if (data?.products) {
-          const mapped = data.products.slice(0, 8).map((p) => ({
-            id: p._id,
-            name: p.title,
-            price: Math.round(Number(p.price) || 0),
-            category: p.category,
-            image: p.image,
-            description: p.description,
-          }));
+          const mapped = data.products.slice(0, 8).map((p) => {
+            let img = p.image || "";
+            if (p.title?.toLowerCase().includes("iphone") || img.toLowerCase().includes("iphone")) {
+              img = "/iphone7.png";
+            } else if (!img.startsWith("http") && !img.startsWith("/")) {
+              img = `/${img}`;
+            }
+            return {
+              id: p._id,
+              name: p.title,
+              price: Math.round(Number(p.price) || 0),
+              category: p.category,
+              image: img,
+              description: p.description,
+            };
+          });
           setProducts(mapped);
         }
       })

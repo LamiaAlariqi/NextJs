@@ -83,14 +83,22 @@ function ProductsContent() {
         throw new Error(result.message || "Failed to load products");
       }
 
-      const mappedData = result.products.map((item) => ({
-        id: item._id,
-        name: item.title,
-        price: Math.round(Number(item.price) || 0),
-        category: item.category,
-        image: item.image,
-        description: item.description,
-      }));
+      const mappedData = result.products.map((item) => {
+        let img = item.image || "";
+        if (item.title?.toLowerCase().includes("iphone") || img.toLowerCase().includes("iphone")) {
+          img = "/iphone7.png";
+        } else if (!img.startsWith("http") && !img.startsWith("/")) {
+          img = `/${img}`;
+        }
+        return {
+          id: item._id,
+          name: item.title,
+          price: Math.round(Number(item.price) || 0),
+          category: item.category,
+          image: img,
+          description: item.description,
+        };
+      });
 
       setProducts(mappedData);
     } catch (err) {
