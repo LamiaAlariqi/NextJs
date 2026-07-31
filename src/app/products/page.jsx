@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useCart } from "@/context/CartContext";
 
 const CATEGORIES = [
@@ -16,6 +16,8 @@ const CATEGORIES = [
 
 function ProductsContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
+
   const initialSearch = searchParams.get("search") || searchParams.get("q") || "";
   const initialCategory = searchParams.get("category") || "All";
 
@@ -26,6 +28,14 @@ function ProductsContent() {
   const [activeCategory, setActiveCategory] = useState(initialCategory);
   const [searchQuery, setSearchQuery] = useState(initialSearch);
   const [quickViewProduct, setQuickViewProduct] = useState(null);
+
+  // Sync category & search when URL searchParams change
+  useEffect(() => {
+    const cat = searchParams.get("category") || "All";
+    const q = searchParams.get("search") || searchParams.get("q") || "";
+    setActiveCategory(cat);
+    setSearchQuery(q);
+  }, [searchParams]);
 
   const fetchProducts = async () => {
     setLoading(true);
@@ -71,9 +81,32 @@ function ProductsContent() {
     }
   };
 
+  const handleSeedDatabase = async () => {
+    setLoading(true);
+    try {
+      await fetch("/api/products/seed");
+      await fetchProducts();
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchProducts();
   }, [activeCategory, searchQuery]);
+
+  const handleCategoryChange = (cat) => {
+    setActiveCategory(cat);
+    const params = new URLSearchParams(searchParams.toString());
+    if (cat === "All") {
+      params.delete("category");
+    } else {
+      params.set("category", cat);
+    }
+    router.push(`/products?${params.toString()}`);
+  };
 
   return (
     <main className="flex-1 bg-background text-foreground min-h-screen pb-24 transition-colors duration-300">
@@ -127,9 +160,9 @@ function ProductsContent() {
           {CATEGORIES.map((cat) => (
             <button
               key={cat}
-              onClick={() => setActiveCategory(cat)}
+              onClick={() => handleCategoryChange(cat)}
               className={`px-5 py-2.5 rounded-full text-xs font-semibold uppercase tracking-wider transition-all whitespace-nowrap cursor-pointer ${
-                activeCategory === cat
+                activeCategory.toLowerCase() === cat.toLowerCase()
                   ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
                   : "bg-card border border-border/60 text-muted-foreground hover:text-foreground hover:border-primary/40"
               }`}
@@ -174,15 +207,23 @@ function ProductsContent() {
             <p className="text-xs text-muted-foreground max-w-sm">
               We couldn't find any products matching your search or selected category.
             </p>
-            <button
-              onClick={() => {
-                setActiveCategory("All");
-                setSearchQuery("");
-              }}
-              className="text-xs bg-primary text-primary-foreground font-semibold px-6 py-2.5 rounded-full"
-            >
-              Reset Filters
-            </button>
+            <div className="flex flex-wrap items-center justify-center gap-3 mt-2">
+              <button
+                onClick={() => {
+                  handleCategoryChange("All");
+                  setSearchQuery("");
+                }}
+                className="text-xs bg-muted text-foreground font-semibold px-5 py-2.5 rounded-full border border-border"
+              >
+                Reset Filters
+              </button>
+              <button
+                onClick={handleSeedDatabase}
+                className="text-xs bg-primary text-primary-foreground font-semibold px-6 py-2.5 rounded-full shadow-md shadow-primary/20"
+              >
+                ⚡ Populate Demo Products
+              </button>
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
