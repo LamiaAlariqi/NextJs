@@ -5,8 +5,7 @@ import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useCart } from "@/context/CartContext";
 
-const CATEGORIES = [
-  "All",
+const STANDARD_CATEGORIES = [
   "Electronics",
   "Furniture",
   "Cars",
@@ -23,6 +22,7 @@ function ProductsContent() {
 
   const { addToCart } = useCart();
   const [products, setProducts] = useState([]);
+  const [allDbProducts, setAllDbProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeCategory, setActiveCategory] = useState(initialCategory);
@@ -36,6 +36,18 @@ function ProductsContent() {
     setActiveCategory(cat);
     setSearchQuery(q);
   }, [searchParams]);
+
+  // Fetch all DB products to generate dynamic category tabs
+  useEffect(() => {
+    fetch("/api/products")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.products) {
+          setAllDbProducts(data.products);
+        }
+      })
+      .catch((e) => console.error(e));
+  }, []);
 
   const fetchProducts = async () => {
     setLoading(true);
@@ -81,18 +93,6 @@ function ProductsContent() {
     }
   };
 
-  const handleSeedDatabase = async () => {
-    setLoading(true);
-    try {
-      await fetch("/api/products/seed");
-      await fetchProducts();
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
     fetchProducts();
   }, [activeCategory, searchQuery]);
@@ -108,6 +108,10 @@ function ProductsContent() {
     router.push(`/products?${params.toString()}`);
   };
 
+  // Build unique dynamic categories list from DB products combined with standard categories
+  const dbCategories = Array.from(new Set(allDbProducts.map((p) => p.category).filter(Boolean)));
+  const displayCategories = ["All", ...Array.from(new Set([...STANDARD_CATEGORIES, ...dbCategories]))];
+
   return (
     <main className="flex-1 bg-background text-foreground min-h-screen pb-24 transition-colors duration-300">
       {/* Page Banner Header */}
@@ -122,7 +126,7 @@ function ProductsContent() {
             Explore <span className="gradient-text">Premium Products</span>
           </h1>
           <p className="text-xs sm:text-sm text-muted-foreground max-w-xl">
-            Browse our curated collection of Electronics, Luxury Furniture, Supercars, Makeup, and High Fashion.
+            Browse our curated marketplace. Manage items and categories easily from your Admin Dashboard.
           </p>
 
           {/* Search Input Bar */}
@@ -154,10 +158,10 @@ function ProductsContent() {
         </div>
       </section>
 
-      {/* Category Tabs */}
+      {/* Dynamic Category Tabs */}
       <section className="max-w-7xl mx-auto px-6 pt-10 pb-6">
         <div className="flex items-center gap-2 overflow-x-auto pb-4 scrollbar-none justify-start md:justify-center">
-          {CATEGORIES.map((cat) => (
+          {displayCategories.map((cat) => (
             <button
               key={cat}
               onClick={() => handleCategoryChange(cat)}
@@ -205,7 +209,7 @@ function ProductsContent() {
             </div>
             <h3 className="text-lg font-bold text-foreground">No Products Found</h3>
             <p className="text-xs text-muted-foreground max-w-sm">
-              We couldn't find any products matching your search or selected category.
+              We couldn't find any products in "{activeCategory}". You can add new items to this category from your Dashboard!
             </p>
             <div className="flex flex-wrap items-center justify-center gap-3 mt-2">
               <button
@@ -217,12 +221,12 @@ function ProductsContent() {
               >
                 Reset Filters
               </button>
-              <button
-                onClick={handleSeedDatabase}
+              <Link
+                href="/addProduct"
                 className="text-xs bg-primary text-primary-foreground font-semibold px-6 py-2.5 rounded-full shadow-md shadow-primary/20"
               >
-                ⚡ Populate Demo Products
-              </button>
+                + Add Item to {activeCategory}
+              </Link>
             </div>
           </div>
         ) : (

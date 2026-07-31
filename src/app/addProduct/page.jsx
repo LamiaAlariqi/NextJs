@@ -23,12 +23,14 @@ export default function AddProductPage() {
   const [uploadMode, setUploadMode] = useState("file"); // "file" or "url"
 
   const CATEGORIES = [
+    "Electronics",
+    "Furniture",
+    "Cars",
+    "Makeup & Beauty",
+    "Clothing & Fashion",
     "Audio",
     "Wearables",
     "Ambient Home",
-    "Mobile & Gadgets",
-    "Laptops & Computers",
-    "Beauty & Personal Care",
     "Other Categories"
   ];
 

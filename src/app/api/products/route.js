@@ -50,7 +50,22 @@ export const GET = async (req) => {
     let filter = {};
 
     if (category && category.toLowerCase() !== "all") {
-      filter.category = { $regex: new RegExp(category, "i") };
+      const catLower = category.toLowerCase();
+      let pattern = category;
+
+      if (catLower.includes("electronics")) {
+        pattern = "Electronics|Audio|Smartphones|Wearables|Ambient Home|Gadgets|إلكترونيات";
+      } else if (catLower.includes("furniture")) {
+        pattern = "Furniture|Ambient Home|Home|Decor|أثاث";
+      } else if (catLower.includes("cars")) {
+        pattern = "Cars|Automotive|Vehicles|سيارات";
+      } else if (catLower.includes("makeup") || catLower.includes("beauty")) {
+        pattern = "Makeup|Beauty|Skincare|Perfume|ميك أب";
+      } else if (catLower.includes("clothing") || catLower.includes("fashion")) {
+        pattern = "Clothing|Fashion|Shoes|Wearables|Accessories|ملابس";
+      }
+
+      filter.category = { $regex: new RegExp(pattern, "i") };
     }
 
     if (searchQuery && searchQuery.trim() !== "") {
