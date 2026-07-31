@@ -16,8 +16,12 @@ export const POST = async (req) => {
     }
 
     const product = await Product.create({
-      ...body,
-      isApproved: true,
+      title: body.title,
+      description: body.description,
+      price: body.price,
+      image: body.image,
+      category: body.category,
+      stocks: body.stocks || 1,
     });
 
     return Response.json({

@@ -10,7 +10,6 @@ export const INITIAL_PRODUCTS = [
     category: "Electronics",
     image: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=800&auto=format&fit=crop&q=80",
     stocks: 10,
-    isApproved: true,
   },
   {
     title: "Sony WH-1000XM5 Wireless Headphones",
@@ -19,7 +18,6 @@ export const INITIAL_PRODUCTS = [
     category: "Electronics",
     image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&auto=format&fit=crop&q=80",
     stocks: 15,
-    isApproved: true,
   },
   {
     title: "iPhone 15 Pro Max Titanium 256GB",
@@ -28,7 +26,6 @@ export const INITIAL_PRODUCTS = [
     category: "Electronics",
     image: "https://images.unsplash.com/photo-1695048133142-1a20484d2569?w=800&auto=format&fit=crop&q=80",
     stocks: 12,
-    isApproved: true,
   },
 
   // Furniture
@@ -39,7 +36,6 @@ export const INITIAL_PRODUCTS = [
     category: "Furniture",
     image: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=800&auto=format&fit=crop&q=80",
     stocks: 5,
-    isApproved: true,
   },
   {
     title: "Minimalist Solid Oak Dining Table",
@@ -48,7 +44,6 @@ export const INITIAL_PRODUCTS = [
     category: "Furniture",
     image: "https://images.unsplash.com/photo-1615066390971-03e4e1c36ddf?w=800&auto=format&fit=crop&q=80",
     stocks: 8,
-    isApproved: true,
   },
   {
     title: "Modern Brass Arch Floor Lamp",
@@ -57,7 +52,6 @@ export const INITIAL_PRODUCTS = [
     category: "Furniture",
     image: "https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=800&auto=format&fit=crop&q=80",
     stocks: 20,
-    isApproved: true,
   },
 
   // Cars
@@ -68,7 +62,6 @@ export const INITIAL_PRODUCTS = [
     category: "Cars",
     image: "https://images.unsplash.com/photo-1617814076367-b759c7d7e738?w=800&auto=format&fit=crop&q=80",
     stocks: 2,
-    isApproved: true,
   },
   {
     title: "Mercedes-AMG G63 SUV",
@@ -77,7 +70,6 @@ export const INITIAL_PRODUCTS = [
     category: "Cars",
     image: "https://images.unsplash.com/photo-1520050206274-a1ae44613e6d?w=800&auto=format&fit=crop&q=80",
     stocks: 1,
-    isApproved: true,
   },
   {
     title: "Tesla Model S Plaid Electric",
@@ -86,7 +78,6 @@ export const INITIAL_PRODUCTS = [
     category: "Cars",
     image: "https://images.unsplash.com/photo-1617788138017-80ad40651399?w=800&auto=format&fit=crop&q=80",
     stocks: 3,
-    isApproved: true,
   },
 
   // Makeup & Beauty
@@ -97,7 +88,6 @@ export const INITIAL_PRODUCTS = [
     category: "Makeup & Beauty",
     image: "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=800&auto=format&fit=crop&q=80",
     stocks: 25,
-    isApproved: true,
   },
   {
     title: "Advanced Hydrating Facial Serum",
@@ -106,7 +96,6 @@ export const INITIAL_PRODUCTS = [
     category: "Makeup & Beauty",
     image: "https://images.unsplash.com/photo-1608248597263-00079e96e7c1?w=800&auto=format&fit=crop&q=80",
     stocks: 40,
-    isApproved: true,
   },
   {
     title: "Dior Sauvage Elixir Parfum 100ml",
@@ -115,7 +104,6 @@ export const INITIAL_PRODUCTS = [
     category: "Makeup & Beauty",
     image: "https://images.unsplash.com/photo-1594035910387-fea47794261f?w=800&auto=format&fit=crop&q=80",
     stocks: 18,
-    isApproved: true,
   },
 
   // Clothing & Fashion
@@ -126,7 +114,6 @@ export const INITIAL_PRODUCTS = [
     category: "Clothing & Fashion",
     image: "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=800&auto=format&fit=crop&q=80",
     stocks: 14,
-    isApproved: true,
   },
   {
     title: "Haute Couture Silk Evening Gown",
@@ -135,7 +122,6 @@ export const INITIAL_PRODUCTS = [
     category: "Clothing & Fashion",
     image: "https://images.unsplash.com/photo-1566174053879-31528523f8ae?w=800&auto=format&fit=crop&q=80",
     stocks: 11,
-    isApproved: true,
   },
   {
     title: "Nike Air Max Urban Sneakers",
@@ -144,7 +130,6 @@ export const INITIAL_PRODUCTS = [
     category: "Clothing & Fashion",
     image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&auto=format&fit=crop&q=80",
     stocks: 30,
-    isApproved: true,
   },
 ];
 
