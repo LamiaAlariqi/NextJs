@@ -34,13 +34,6 @@ export default function AddProductPage() {
     "Other Categories"
   ];
 
-  const CONDITIONS = [
-    "🟢 New",
-    "🟠 Used - Excellent",
-    "🟠 Used - Good",
-    "🔵 Refurbished"
-  ];
-
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -217,45 +210,25 @@ export default function AddProductPage() {
             </div>
 
             {/* Category & Condition Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="flex flex-col gap-2">
-                <label htmlFor="product-category" className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase pl-1">
-                  Category *
-                </label>
-                <select
-                  id="product-category"
-                  name="category"
-                  value={formData.category}
-                  onChange={handleChange}
-                  className="w-full bg-muted/40 border border-border/70 rounded-2xl px-5 py-3.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all cursor-pointer"
-                  required
-                >
-                  {CATEGORIES.map((cat, idx) => (
-                    <option key={idx} value={cat} className="bg-card text-foreground">
-                      {cat}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <label htmlFor="product-condition" className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase pl-1">
-                  Item Condition
-                </label>
-                <select
-                  id="product-condition"
-                  name="condition"
-                  value={formData.condition}
-                  onChange={handleChange}
-                  className="w-full bg-muted/40 border border-border/70 rounded-2xl px-5 py-3.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all cursor-pointer"
-                >
-                  {CONDITIONS.map((cond, idx) => (
-                    <option key={idx} value={cond} className="bg-card text-foreground">
-                      {cond}
-                    </option>
-                  ))}
-                </select>
-              </div>
+            {/* Category Select */}
+            <div className="flex flex-col gap-2">
+              <label htmlFor="product-category" className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase pl-1">
+                Category *
+              </label>
+              <select
+                id="product-category"
+                name="category"
+                value={formData.category}
+                onChange={handleChange}
+                className="w-full bg-muted/40 border border-border/70 rounded-2xl px-5 py-3.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all cursor-pointer"
+                required
+              >
+                {CATEGORIES.map((cat, idx) => (
+                  <option key={idx} value={cat} className="bg-card text-foreground">
+                    {cat}
+                  </option>
+                ))}
+              </select>
             </div>
 
             {/* Price & Stock Grid */}

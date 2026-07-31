@@ -162,9 +162,8 @@ export default function HomePage() {
               >
                 {/* Image & Quick View button overlay */}
                 <div className="h-56 rounded-xl overflow-hidden bg-muted/30 flex items-center justify-center relative mb-5">
-                  {/* Condition Badge */}
-                  <span className="absolute top-3 left-3 z-10 text-[10px] font-bold tracking-wider px-3 py-1 rounded-full bg-background/80 backdrop-blur-md border border-border/60 text-foreground shadow-sm">
-                    {prod.condition || "🟢 New"}
+                  <span className="absolute top-3 left-3 z-10 text-[10px] font-bold tracking-widest text-primary bg-primary/10 border border-primary/20 backdrop-blur-md px-3 py-1 rounded-full uppercase">
+                    {prod.category}
                   </span>
 
                   {/* eslint-disable-next-line @next/next/no-img-element */}
