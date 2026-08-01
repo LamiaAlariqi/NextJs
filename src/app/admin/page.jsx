@@ -126,6 +126,32 @@ export default function AdminDashboardPage() {
     }
   };
 
+  const handleUpdateOrderStatus = async (orderId, newStatus) => {
+    try {
+      const res = await fetch("/api/orders", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId, status: newStatus }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setAdminOrders((prev) =>
+          prev.map((o) =>
+            o.orderId === orderId || o.id === orderId || o._id === orderId
+              ? { ...o, status: newStatus }
+              : o
+          )
+        );
+        showToast(`✓ Order status updated to "${newStatus}"!`);
+      } else {
+        showToast(`✕ Failed to update order status.`);
+      }
+    } catch (e) {
+      console.error(e);
+      showToast(`✕ Error connecting to server.`);
+    }
+  };
+
   const handleDeleteUser = async (userId, userName) => {
     if (!confirm(`Are you sure you want to remove user "${userName}"?`)) return;
     try {
@@ -558,7 +584,7 @@ export default function AdminDashboardPage() {
             <div className="flex justify-between items-center">
               <div>
                 <h2 className="text-lg font-bold text-white">Store Orders Log</h2>
-                <p className="text-xs text-slate-400">Track paid orders and fulfillment status across all customers.</p>
+                <p className="text-xs text-slate-400">Track customer purchases and update order delivery status.</p>
               </div>
             </div>
 
@@ -568,22 +594,70 @@ export default function AdminDashboardPage() {
                 <p className="text-xs text-slate-400">Customer orders will show here once completed via Stripe.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 gap-4">
+              <div className="grid grid-cols-1 gap-5">
                 {adminOrders.map((ord) => (
                   <div
                     key={ord._id || ord.id}
-                    className="bg-[#141724] border border-[#24293e] p-6 rounded-3xl flex flex-col gap-4 justify-between"
+                    className="bg-[#141724] border border-[#24293e] p-6 rounded-3xl flex flex-col gap-5 shadow-md hover:border-purple-500/30 transition-all"
                   >
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-[#24293e] pb-3">
+                    {/* Header */}
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-[#24293e] pb-4">
                       <div>
-                        <span className="text-xs font-bold text-white">Order #{ord.orderId || ord._id}</span>
-                        <p className="text-[10px] text-slate-400">Customer: {ord.userEmail || "Guest Customer"}</p>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-black text-white">Order #{ord.orderId || ord.id}</span>
+                          {ord.date && <span className="text-xs text-slate-400">• {ord.date}</span>}
+                        </div>
+                        <p className="text-xs text-slate-400 mt-1">
+                          Customer Email: <span className="text-purple-300 font-semibold">{ord.userEmail || "Guest Customer"}</span>
+                        </p>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <span className="text-sm font-black text-emerald-400">${ord.totalAmount}</span>
-                        <span className="text-[10px] font-extrabold uppercase bg-emerald-500/10 text-emerald-400 px-3 py-1 rounded-full border border-emerald-500/20">
-                          {ord.paymentStatus || "Paid"}
-                        </span>
+
+                      <div className="flex items-center gap-4">
+                        <div className="text-right">
+                          <span className="text-[10px] text-slate-400 uppercase font-bold block">Total Amount</span>
+                          <span className="text-base font-black text-emerald-400">${ord.total || ord.totalAmount}</span>
+                        </div>
+
+                        {/* Status Change Selector */}
+                        <div className="flex flex-col gap-1">
+                          <span className="text-[9px] font-bold text-slate-400 uppercase">Order Status</span>
+                          <select
+                            value={ord.status || "Processing"}
+                            onChange={(e) => handleUpdateOrderStatus(ord.orderId || ord.id, e.target.value)}
+                            className="bg-[#1c2134] border border-[#2b324d] text-white text-xs font-bold px-3 py-1.5 rounded-xl focus:outline-none focus:border-purple-500 cursor-pointer"
+                          >
+                            <option value="Processing" className="bg-[#141724]">⏳ Processing</option>
+                            <option value="Shipped" className="bg-[#141724]">🚚 Shipped</option>
+                            <option value="Delivered" className="bg-[#141724]">✅ Delivered</option>
+                            <option value="Cancelled" className="bg-[#141724]">❌ Cancelled</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Items List */}
+                    <div className="flex flex-col gap-2">
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                        Purchased Items ({(ord.items || []).length})
+                      </span>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {(ord.items || []).map((item, idx) => (
+                          <div
+                            key={idx}
+                            className="flex items-center gap-3 p-3 rounded-2xl bg-[#1c2134] border border-[#2b324d]"
+                          >
+                            <div className="w-10 h-10 rounded-xl bg-[#24293e] flex items-center justify-center shrink-0 border border-[#2b324d] p-1">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={item.image} alt={item.title} className="max-h-full max-w-full object-contain" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h4 className="text-xs font-bold text-white truncate">{item.title}</h4>
+                              <span className="text-[10px] text-slate-400">
+                                ${item.price} × {item.quantity}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   </div>

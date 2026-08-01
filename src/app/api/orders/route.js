@@ -12,6 +12,8 @@ export const GET = async (req) => {
 
     const formattedOrders = orders.map((o) => ({
       id: o.orderId || o._id.toString(),
+      _id: o._id.toString(),
+      orderId: o.orderId || o._id.toString(),
       userEmail: o.userEmail,
       date: new Date(o.createdAt).toLocaleDateString("en-US", {
         month: "short",
@@ -21,8 +23,10 @@ export const GET = async (req) => {
       status: o.status || "Processing",
       step: o.status === "Delivered" ? 3 : o.status === "Shipped" ? 2 : 1,
       paymentStatus: o.paymentStatus || "Paid",
+      totalAmount: o.totalAmount,
       total: o.totalAmount,
-      items: o.items.map((i) => ({
+      items: (o.items || []).map((i) => ({
+        id: i._id || i.id,
         title: i.title || i.name || "Item",
         price: i.price,
         quantity: i.quantity,
@@ -81,6 +85,42 @@ export const POST = async (req) => {
         success: false,
         message: error.message || error,
       },
+      { status: 500 }
+    );
+  }
+};
+
+export const PUT = async (req) => {
+  try {
+    await connection();
+    const body = await req.json();
+    const { orderId, status } = body;
+
+    if (!orderId || !status) {
+      return Response.json(
+        { success: false, message: "Order ID and status are required" },
+        { status: 400 }
+      );
+    }
+
+    const updatedOrder = await Order.findOneAndUpdate(
+      { $or: [{ orderId: orderId }, { _id: orderId }] },
+      { status: status },
+      { new: true }
+    );
+
+    return Response.json(
+      {
+        success: true,
+        message: "Order status updated successfully",
+        order: updatedOrder,
+      },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error("Update order error:", error);
+    return Response.json(
+      { success: false, message: error.message || error },
       { status: 500 }
     );
   }
