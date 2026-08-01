@@ -154,40 +154,85 @@ export default function AdminDashboardPage() {
 
   // Logged-in admin user info & permission check
   const [currentUser, setCurrentUser] = useState(null);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
   useEffect(() => {
-    const savedUser = localStorage.getItem("aura_user");
-    if (savedUser) {
+    const checkAuthAndSync = () => {
+      const savedUser = localStorage.getItem("aura_user");
+      if (!savedUser) {
+        // User logged out -> Redirect to Login immediately!
+        router.push("/Login");
+        return;
+      }
+
       try {
         const u = JSON.parse(savedUser);
+        if (!u) {
+          router.push("/Login");
+          return;
+        }
+
+        // Check initial cached role
+        const cachedRole = (u.role || "").toLowerCase().trim().replace(/[\s_]/g, "");
+        if (cachedRole === "user" || cachedRole === "customer") {
+          router.push("/home");
+          return;
+        }
+
         setCurrentUser(u);
 
-        // Fetch fresh role from MongoDB DB to sync DB updates immediately!
+        // Sync live profile from MongoDB
         const userId = u._id || u.id;
         if (userId) {
           fetch(`/api/users/${userId}`)
             .then((res) => res.json())
             .then((data) => {
               if (data?.user) {
+                const liveRole = (data.user.role || "").toLowerCase().trim().replace(/[\s_]/g, "");
+                if (liveRole === "user" || liveRole === "customer") {
+                  router.push("/home");
+                  return;
+                }
                 setCurrentUser(data.user);
                 localStorage.setItem("aura_user", JSON.stringify(data.user));
               }
             })
-            .catch((e) => console.error("Failed to sync fresh user role", e));
+            .catch((e) => console.error("Failed to sync fresh user role", e))
+            .finally(() => setIsCheckingAuth(false));
+        } else {
+          setIsCheckingAuth(false);
         }
       } catch (e) {
         console.error(e);
+        router.push("/Login");
       }
-    }
-  }, []);
+    };
+
+    checkAuthAndSync();
+
+    // Listen to global logout event
+    const handleAuthChange = () => {
+      const savedUser = localStorage.getItem("aura_user");
+      if (!savedUser) {
+        router.push("/Login");
+      } else {
+        checkAuthAndSync();
+      }
+    };
+
+    window.addEventListener("aura_login_state_change", handleAuthChange);
+    return () => {
+      window.removeEventListener("aura_login_state_change", handleAuthChange);
+    };
+  }, [router]);
 
   const roleClean = (currentUser?.role || "").toLowerCase().trim().replace(/[\s_]/g, "");
   const isSuperAdmin =
-    !currentUser ||
-    !currentUser.role ||
+    roleClean === "" ||
     roleClean === "admin" ||
     roleClean === "superadmin" ||
-    roleClean.includes("admin");
+    roleClean === "superadmin" ||
+    (roleClean.includes("admin") && !roleClean.includes("moderator"));
 
   const handleUpdateUserRole = async (userId, userName, newRole) => {
     try {
