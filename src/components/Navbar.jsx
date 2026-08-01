@@ -75,6 +75,23 @@ export default function Navbar() {
     };
   }, []);
 
+  useEffect(() => {
+    if (session?.user) {
+      const gUser = {
+        name: session.user.name || "",
+        email: session.user.email || "",
+        image: session.user.image || "",
+        role: "customer",
+      };
+      const currentStored = localStorage.getItem("aura_user");
+      if (!currentStored || JSON.parse(currentStored).email !== session.user.email) {
+        localStorage.setItem("aura_user", JSON.stringify(gUser));
+        setLocalUser(gUser);
+        window.dispatchEvent(new Event("aura_login_state_change"));
+      }
+    }
+  }, [session]);
+
   const activeUser = session?.user || localUser;
   const roleClean = (activeUser?.role || "").toLowerCase().trim().replace(/[\s_]/g, "");
   const canAccessDashboard =

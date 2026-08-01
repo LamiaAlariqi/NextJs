@@ -4,8 +4,11 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
+import { useSession } from "next-auth/react";
+
 export default function ProfilePage() {
   const router = useRouter();
+  const { data: session } = useSession();
   const [currentUser, setCurrentUser] = useState(null);
   const [formData, setFormData] = useState({ name: "", email: "" });
   const [loading, setLoading] = useState(true);
@@ -14,6 +17,25 @@ export default function ProfilePage() {
   const [successMessage, setSuccessMessage] = useState("");
 
   useEffect(() => {
+    // 1. Google / OAuth Active Session Priority
+    if (session?.user) {
+      const gUser = {
+        name: session.user.name || "",
+        email: session.user.email || "",
+        image: session.user.image || "",
+        role: "customer",
+      };
+      setCurrentUser(gUser);
+      setFormData({
+        name: gUser.name,
+        email: gUser.email,
+      });
+      localStorage.setItem("aura_user", JSON.stringify(gUser));
+      setLoading(false);
+      return;
+    }
+
+    // 2. Local session fallback
     const savedUser = localStorage.getItem("aura_user");
     if (!savedUser) {
       setLoading(false);
@@ -34,7 +56,6 @@ export default function ProfilePage() {
                 name: result.user.name,
                 email: result.user.email
               });
-              // Keep local storage in sync with fresh database info
               localStorage.setItem("aura_user", JSON.stringify(result.user));
             } else {
               setFormData({
@@ -62,7 +83,7 @@ export default function ProfilePage() {
       console.error("Failed to parse user session", e);
       setLoading(false);
     }
-  }, []);
+  }, [session]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
