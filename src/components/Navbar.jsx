@@ -99,6 +99,14 @@ export default function Navbar() {
   const totalItems = cart.reduce((acc, item) => acc + item.quantity, 0);
   const totalPrice = cart.reduce((acc, item) => acc + item.price * item.quantity, 0);
 
+  const handleSellItemClick = (e) => {
+    const savedUser = localStorage.getItem("aura_user");
+    if (!activeUser && !savedUser) {
+      e.preventDefault();
+      router.push("/Login");
+    }
+  };
+
   return (
     <>
       <header className="glass sticky top-0 z-40 w-full transition-all duration-300 border-b border-border/40">
@@ -158,6 +166,7 @@ export default function Navbar() {
             )}
             <Link
               href={activeUser ? "/addProduct" : "/Login"}
+              onClick={handleSellItemClick}
               className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 hover:bg-emerald-500 hover:text-white px-3.5 py-1.5 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
             >
               <span className="text-sm font-extrabold">+</span> Sell Item
