@@ -238,8 +238,13 @@ export default function AdminDashboardPage() {
   }, [router]);
 
   const roleClean = (currentUser?.role || "").toLowerCase().trim().replace(/[\s_]/g, "");
-  const isModerator = roleClean === "moderator";
-  const isSuperAdmin = !isModerator;
+  const isAdmin =
+    roleClean === "" ||
+    roleClean === "admin" ||
+    roleClean === "superadmin" ||
+    roleClean.includes("admin") ||
+    roleClean.includes("super");
+  const isSupervisor = roleClean === "supervisor" || roleClean === "moderator";
 
   const handleUpdateUserRole = async (userId, userName, newRole) => {
     try {
@@ -392,7 +397,7 @@ export default function AdminDashboardPage() {
               <span className="text-[10px] opacity-70">{approvedProducts.length}</span>
             </button>
 
-            {isSuperAdmin && (
+            {isAdmin && (
               <button
                 onClick={() => setActiveTab("users")}
                 className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
@@ -681,12 +686,12 @@ export default function AdminDashboardPage() {
                 <p className="text-xs text-slate-400">View user accounts, create new staff/moderators, and manage permissions.</p>
               </div>
 
-              {isSuperAdmin && (
+              {isAdmin && (
                 <button
                   onClick={() => setIsAddUserModalOpen(true)}
                   className="bg-purple-600 hover:bg-purple-500 text-white font-bold px-5 py-2.5 rounded-2xl text-xs transition-all shadow-lg shadow-purple-600/30 flex items-center gap-2 cursor-pointer shrink-0"
                 >
-                  <span className="text-sm font-black">+</span> Add Member / Moderator
+                  <span className="text-sm font-black">+</span> Add Member / Supervisor
                 </button>
               )}
             </div>
@@ -709,13 +714,13 @@ export default function AdminDashboardPage() {
                         <td className="py-4 px-6 font-semibold text-white">{u.name}</td>
                         <td className="py-4 px-6 text-slate-300">{u.email}</td>
                         <td className="py-4 px-6">
-                          {u.role === "admin" || u.role === "superadmin" ? (
+                          {u.role === "admin" || u.role === "superadmin" || (u.role || "").toLowerCase().includes("admin") ? (
                             <span className="text-[10px] font-extrabold text-purple-300 bg-purple-500/20 px-3 py-1 rounded-full border border-purple-500/30">
-                              👑 Super Admin
+                              👑 Admin
                             </span>
-                          ) : u.role === "moderator" ? (
+                          ) : u.role === "supervisor" || u.role === "moderator" ? (
                             <span className="text-[10px] font-extrabold text-amber-300 bg-amber-500/20 px-3 py-1 rounded-full border border-amber-500/30">
-                              🛡️ Moderator
+                              🛡️ Supervisor
                             </span>
                           ) : (
                             <span className="text-[10px] font-bold text-slate-300 bg-slate-500/10 px-3 py-1 rounded-full border border-slate-500/20">
@@ -729,13 +734,13 @@ export default function AdminDashboardPage() {
                         <td className="py-4 px-6 text-right">
                           <div className="flex items-center justify-end gap-2">
                             <select
-                              value={u.role || "user"}
+                              value={u.role || "customer"}
                               onChange={(e) => handleUpdateUserRole(u._id || u.id, u.name, e.target.value)}
                               className="bg-[#1c2134] border border-[#2b324d] text-white text-xs font-bold px-3 py-1.5 rounded-xl focus:outline-none focus:border-purple-500 cursor-pointer"
                             >
-                              <option value="user" className="bg-[#141724]">👤 Customer</option>
-                              <option value="moderator" className="bg-[#141724]">🛡️ Moderator (Products/Orders)</option>
-                              <option value="admin" className="bg-[#141724]">👑 Super Admin (Full)</option>
+                              <option value="customer" className="bg-[#141724]">👤 Customer</option>
+                              <option value="supervisor" className="bg-[#141724]">🛡️ Supervisor (Products/Orders)</option>
+                              <option value="admin" className="bg-[#141724]">👑 Admin (Full Access)</option>
                             </select>
                             <button
                               onClick={() => handleDeleteUser(u._id || u.id, u.name)}
@@ -1029,9 +1034,9 @@ export default function AdminDashboardPage() {
                   className="bg-[#1c2134] border border-[#2c334e] rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-purple-500 cursor-pointer"
                   required
                 >
-                  <option value="user" className="bg-[#141724]">👤 Customer (Standard User)</option>
-                  <option value="moderator" className="bg-[#141724]">🛡️ Moderator (Products & Orders Access)</option>
-                  <option value="admin" className="bg-[#141724]">👑 Super Admin (Full Access to Everything)</option>
+                  <option value="customer" className="bg-[#141724]">👤 Customer (Standard User)</option>
+                  <option value="supervisor" className="bg-[#141724]">🛡️ Supervisor (Products & Orders Access)</option>
+                  <option value="admin" className="bg-[#141724]">👑 Admin (Full Access to Everything)</option>
                 </select>
               </div>
 
