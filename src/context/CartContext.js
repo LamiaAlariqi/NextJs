@@ -30,12 +30,15 @@ export function CartProvider({ children }) {
         }
       }
     }
-    return "aura_cart_guest";
+    return null;
   };
 
-  // Reload user's isolated cart whenever user/session changes
-  useEffect(() => {
+  const loadUserCart = () => {
     const key = getUserCartKey();
+    if (!key) {
+      setCart([]);
+      return;
+    }
     const savedCart = localStorage.getItem(key);
     if (savedCart) {
       try {
@@ -47,6 +50,11 @@ export function CartProvider({ children }) {
     } else {
       setCart([]);
     }
+  };
+
+  // Reload user's isolated cart whenever user/session changes
+  useEffect(() => {
+    loadUserCart();
   }, [session?.user?.email]);
 
   // Load theme preference
@@ -62,15 +70,9 @@ export function CartProvider({ children }) {
       document.documentElement.className = initialTheme;
     }
 
-    // Listen for custom login state changes
+    // Listen for custom login/logout state changes
     const handleLoginChange = () => {
-      const key = getUserCartKey();
-      const saved = localStorage.getItem(key);
-      if (saved) {
-        try { setCart(JSON.parse(saved)); } catch (e) { setCart([]); }
-      } else {
-        setCart([]);
-      }
+      loadUserCart();
     };
 
     window.addEventListener("aura_login_state_change", handleLoginChange);
@@ -83,7 +85,9 @@ export function CartProvider({ children }) {
   const saveCartToStorage = (newCart) => {
     setCart(newCart);
     const key = getUserCartKey();
-    localStorage.setItem(key, JSON.stringify(newCart));
+    if (key) {
+      localStorage.setItem(key, JSON.stringify(newCart));
+    }
   };
 
   const addToCart = (product) => {
