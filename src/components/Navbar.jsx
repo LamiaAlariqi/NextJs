@@ -503,8 +503,14 @@ export default function Navbar() {
                           </button>
                           <span className="text-xs font-semibold select-none">{item.quantity}</span>
                           <button
-                            onClick={() => addToCart(item)}
-                            className="text-muted-foreground hover:text-foreground text-xs"
+                            onClick={() => {
+                              const maxStock = typeof item.stocks === "number" && item.stocks >= 0 ? item.stocks : 10;
+                              if (item.quantity < maxStock) {
+                                addToCart(item);
+                              }
+                            }}
+                            disabled={item.quantity >= (typeof item.stocks === "number" && item.stocks >= 0 ? item.stocks : 10)}
+                            className="text-muted-foreground hover:text-foreground text-xs disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
                           >
                             +
                           </button>

@@ -91,14 +91,20 @@ export function CartProvider({ children }) {
   };
 
   const addToCartWithQuantity = (product, qty = 1) => {
-    const existingItem = cart.find((item) => item.id === product.id);
+    const maxStock = typeof product.stocks === "number" && product.stocks >= 0 ? product.stocks : 10;
+    const pId = product.id || product._id;
+    const existingItem = cart.find((item) => (item.id || item._id) === pId);
     let newCart;
     if (existingItem) {
+      const targetQty = Math.min(existingItem.quantity + qty, maxStock);
       newCart = cart.map((item) =>
-        item.id === product.id ? { ...item, quantity: item.quantity + qty } : item
+        (item.id || item._id) === pId
+          ? { ...item, quantity: targetQty, stocks: maxStock }
+          : item
       );
     } else {
-      newCart = [...cart, { ...product, quantity: qty }];
+      const targetQty = Math.min(qty, maxStock);
+      newCart = [...cart, { ...product, quantity: targetQty, stocks: maxStock }];
     }
     saveCartToStorage(newCart);
     setIsCartOpen(true);
