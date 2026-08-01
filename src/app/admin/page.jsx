@@ -26,6 +26,16 @@ export default function AdminDashboardPage() {
   });
   const [isUpdating, setIsUpdating] = useState(false);
 
+  // Add User Modal State
+  const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
+  const [newUserFormData, setNewUserFormData] = useState({
+    name: "",
+    email: "",
+    password: "",
+    role: "user",
+  });
+  const [isCreatingUser, setIsCreatingUser] = useState(false);
+
   const showToast = (msg) => {
     setNotification(msg);
     setTimeout(() => setNotification(""), 3500);
@@ -254,6 +264,33 @@ export default function AdminDashboardPage() {
     } catch (e) {
       console.error(e);
       showToast(`✕ Error connecting to API server.`);
+    }
+  };
+
+  const handleCreateUser = async (e) => {
+    e.preventDefault();
+    setIsCreatingUser(true);
+    try {
+      const res = await fetch("/api/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newUserFormData),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success && data.user) {
+        setUsers((prev) => [data.user, ...prev]);
+        showToast(`✓ User "${newUserFormData.name}" created as ${newUserFormData.role.toUpperCase()}!`);
+        setIsAddUserModalOpen(false);
+        setNewUserFormData({ name: "", email: "", password: "", role: "user" });
+      } else {
+        showToast(`✕ Failed to create user: ${data.message || "Unknown error"}`);
+      }
+    } catch (err) {
+      console.error(err);
+      showToast(`✕ Error connecting to server.`);
+    } finally {
+      setIsCreatingUser(false);
     }
   };
 
@@ -642,11 +679,20 @@ export default function AdminDashboardPage() {
         {/* TAB CONTENT: User Management */}
         {activeTab === "users" && (
           <div className="flex flex-col gap-6 animate-fade-in">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div>
-                <h2 className="text-lg font-bold text-white">Registered Members</h2>
-                <p className="text-xs text-slate-400">View user accounts and manage customer access.</p>
+                <h2 className="text-lg font-bold text-white">Registered Members & Staff</h2>
+                <p className="text-xs text-slate-400">View user accounts, create new staff/moderators, and manage permissions.</p>
               </div>
+
+              {isSuperAdmin && (
+                <button
+                  onClick={() => setIsAddUserModalOpen(true)}
+                  className="bg-purple-600 hover:bg-purple-500 text-white font-bold px-5 py-2.5 rounded-2xl text-xs transition-all shadow-lg shadow-purple-600/30 flex items-center gap-2 cursor-pointer shrink-0"
+                >
+                  <span className="text-sm font-black">+</span> Add Member / Moderator
+                </button>
+              )}
             </div>
 
             <div className="bg-[#141724] rounded-3xl border border-[#24293e] overflow-hidden shadow-sm">
@@ -913,6 +959,100 @@ export default function AdminDashboardPage() {
                   className="px-6 py-2.5 rounded-xl text-xs font-bold bg-purple-600 hover:bg-purple-500 text-white shadow-lg shadow-purple-600/30 cursor-pointer disabled:opacity-50"
                 >
                   {isUpdating ? "Saving Changes..." : "Save Product Changes"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ADD NEW USER MODAL */}
+      {isAddUserModalOpen && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setIsAddUserModalOpen(false)}
+        >
+          <div
+            className="bg-[#141724] border border-[#2c334e] max-w-lg w-full rounded-3xl p-6 sm:p-8 shadow-2xl relative flex flex-col gap-6 animate-fade-in text-white"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center border-b border-[#2c334e] pb-4">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <span>👤 Add New Member / Moderator</span>
+              </h3>
+              <button
+                onClick={() => setIsAddUserModalOpen(false)}
+                className="text-slate-400 hover:text-white p-1 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateUser} className="flex flex-col gap-4">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Full Name *</label>
+                <input
+                  type="text"
+                  placeholder="e.g. John Doe"
+                  value={newUserFormData.name}
+                  onChange={(e) => setNewUserFormData({ ...newUserFormData, name: e.target.value })}
+                  className="bg-[#1c2134] border border-[#2c334e] rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-purple-500"
+                  required
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Email Address *</label>
+                <input
+                  type="email"
+                  placeholder="john@example.com"
+                  value={newUserFormData.email}
+                  onChange={(e) => setNewUserFormData({ ...newUserFormData, email: e.target.value })}
+                  className="bg-[#1c2134] border border-[#2c334e] rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-purple-500"
+                  required
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Password *</label>
+                <input
+                  type="password"
+                  placeholder="••••••••"
+                  value={newUserFormData.password}
+                  onChange={(e) => setNewUserFormData({ ...newUserFormData, password: e.target.value })}
+                  className="bg-[#1c2134] border border-[#2c334e] rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-purple-500"
+                  required
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Account Role *</label>
+                <select
+                  value={newUserFormData.role}
+                  onChange={(e) => setNewUserFormData({ ...newUserFormData, role: e.target.value })}
+                  className="bg-[#1c2134] border border-[#2c334e] rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-purple-500 cursor-pointer"
+                  required
+                >
+                  <option value="user" className="bg-[#141724]">👤 Customer (Standard User)</option>
+                  <option value="moderator" className="bg-[#141724]">🛡️ Moderator (Products & Orders Access)</option>
+                  <option value="admin" className="bg-[#141724]">👑 Super Admin (Full Access to Everything)</option>
+                </select>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-[#2c334e]">
+                <button
+                  type="button"
+                  onClick={() => setIsAddUserModalOpen(false)}
+                  className="px-5 py-2.5 rounded-xl text-xs font-bold bg-[#1c2134] text-slate-300 hover:text-white border border-[#2c334e] cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isCreatingUser}
+                  className="px-6 py-2.5 rounded-xl text-xs font-bold bg-purple-600 hover:bg-purple-500 text-white shadow-lg shadow-purple-600/30 cursor-pointer disabled:opacity-50"
+                >
+                  {isCreatingUser ? "Creating Account..." : "Create Account"}
                 </button>
               </div>
             </form>
