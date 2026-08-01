@@ -161,13 +161,33 @@ export default function AdminDashboardPage() {
       try {
         const u = JSON.parse(savedUser);
         setCurrentUser(u);
+
+        // Fetch fresh role from MongoDB DB to sync DB updates immediately!
+        const userId = u._id || u.id;
+        if (userId) {
+          fetch(`/api/users/${userId}`)
+            .then((res) => res.json())
+            .then((data) => {
+              if (data?.user) {
+                setCurrentUser(data.user);
+                localStorage.setItem("aura_user", JSON.stringify(data.user));
+              }
+            })
+            .catch((e) => console.error("Failed to sync fresh user role", e));
+        }
       } catch (e) {
         console.error(e);
       }
     }
   }, []);
 
-  const isSuperAdmin = !currentUser?.role || currentUser?.role === "admin" || currentUser?.role === "superadmin";
+  const roleClean = (currentUser?.role || "").toLowerCase().trim().replace(/[\s_]/g, "");
+  const isSuperAdmin =
+    !currentUser ||
+    !currentUser.role ||
+    roleClean === "admin" ||
+    roleClean === "superadmin" ||
+    roleClean.includes("admin");
 
   const handleUpdateUserRole = async (userId, userName, newRole) => {
     try {
