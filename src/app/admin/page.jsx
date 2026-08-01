@@ -152,8 +152,24 @@ export default function AdminDashboardPage() {
     }
   };
 
-  const handleToggleUserRole = async (userId, userName, currentRole) => {
-    const newRole = currentRole === "admin" ? "user" : "admin";
+  // Logged-in admin user info & permission check
+  const [currentUser, setCurrentUser] = useState(null);
+
+  useEffect(() => {
+    const savedUser = localStorage.getItem("aura_user");
+    if (savedUser) {
+      try {
+        const u = JSON.parse(savedUser);
+        setCurrentUser(u);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  }, []);
+
+  const isSuperAdmin = !currentUser?.role || currentUser?.role === "admin" || currentUser?.role === "superadmin";
+
+  const handleUpdateUserRole = async (userId, userName, newRole) => {
     try {
       const res = await fetch(`/api/users/${userId}`, {
         method: "PUT",
@@ -165,7 +181,7 @@ export default function AdminDashboardPage() {
         setUsers((prev) =>
           prev.map((u) => ((u._id || u.id) === userId ? { ...u, role: newRole } : u))
         );
-        showToast(`✓ User "${userName}" is now an ${newRole.toUpperCase()}!`);
+        showToast(`✓ User "${userName}" role changed to ${newRole.toUpperCase()}!`);
       } else {
         showToast(`✕ Failed to update user role.`);
       }
@@ -277,22 +293,24 @@ export default function AdminDashboardPage() {
               <span className="text-[10px] opacity-70">{approvedProducts.length}</span>
             </button>
 
-            <button
-              onClick={() => setActiveTab("users")}
-              className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                activeTab === "users"
-                  ? "bg-purple-600 text-white shadow-lg shadow-purple-600/30"
-                  : "text-slate-400 hover:bg-[#1a1e30] hover:text-white"
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                </svg>
-                <span>User Management</span>
-              </div>
-              <span className="text-[10px] opacity-70">{users.length}</span>
-            </button>
+            {isSuperAdmin && (
+              <button
+                onClick={() => setActiveTab("users")}
+                className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                  activeTab === "users"
+                    ? "bg-purple-600 text-white shadow-lg shadow-purple-600/30"
+                    : "text-slate-400 hover:bg-[#1a1e30] hover:text-white"
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                  </svg>
+                  <span>User Management</span>
+                </div>
+                <span className="text-[10px] opacity-70">{users.length}</span>
+              </button>
+            )}
 
             <button
               onClick={() => setActiveTab("orders")}
@@ -583,9 +601,13 @@ export default function AdminDashboardPage() {
                         <td className="py-4 px-6 font-semibold text-white">{u.name}</td>
                         <td className="py-4 px-6 text-slate-300">{u.email}</td>
                         <td className="py-4 px-6">
-                          {u.role === "admin" ? (
+                          {u.role === "admin" || u.role === "superadmin" ? (
                             <span className="text-[10px] font-extrabold text-purple-300 bg-purple-500/20 px-3 py-1 rounded-full border border-purple-500/30">
-                              👑 Admin
+                              👑 Super Admin
+                            </span>
+                          ) : u.role === "moderator" ? (
+                            <span className="text-[10px] font-extrabold text-amber-300 bg-amber-500/20 px-3 py-1 rounded-full border border-amber-500/30">
+                              🛡️ Moderator
                             </span>
                           ) : (
                             <span className="text-[10px] font-bold text-slate-300 bg-slate-500/10 px-3 py-1 rounded-full border border-slate-500/20">
@@ -598,16 +620,15 @@ export default function AdminDashboardPage() {
                         </td>
                         <td className="py-4 px-6 text-right">
                           <div className="flex items-center justify-end gap-2">
-                            <button
-                              onClick={() => handleToggleUserRole(u._id || u.id, u.name, u.role)}
-                              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
-                                u.role === "admin"
-                                  ? "bg-amber-500/10 text-amber-300 hover:bg-amber-500 hover:text-white border-amber-500/30"
-                                  : "bg-purple-500/10 text-purple-300 hover:bg-purple-600 hover:text-white border-purple-500/30"
-                              }`}
+                            <select
+                              value={u.role || "user"}
+                              onChange={(e) => handleUpdateUserRole(u._id || u.id, u.name, e.target.value)}
+                              className="bg-[#1c2134] border border-[#2b324d] text-white text-xs font-bold px-3 py-1.5 rounded-xl focus:outline-none focus:border-purple-500 cursor-pointer"
                             >
-                              {u.role === "admin" ? "Demote to User" : "Make Admin"}
-                            </button>
+                              <option value="user" className="bg-[#141724]">👤 Customer</option>
+                              <option value="moderator" className="bg-[#141724]">🛡️ Moderator (Products/Orders)</option>
+                              <option value="admin" className="bg-[#141724]">👑 Super Admin (Full)</option>
+                            </select>
                             <button
                               onClick={() => handleDeleteUser(u._id || u.id, u.name)}
                               className="bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border border-red-500/30"
