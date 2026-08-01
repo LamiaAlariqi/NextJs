@@ -91,6 +91,15 @@ export function CartProvider({ children }) {
   };
 
   const addToCartWithQuantity = (product, qty = 1) => {
+    // Check if user is logged in
+    const isLogged = Boolean(session?.user) || (typeof window !== "undefined" && Boolean(localStorage.getItem("aura_user")));
+    if (!isLogged) {
+      if (typeof window !== "undefined") {
+        window.location.href = "/Login";
+      }
+      return;
+    }
+
     const maxStock = typeof product.stocks === "number" && product.stocks >= 0 ? product.stocks : 10;
     const pId = product.id || product._id;
     const existingItem = cart.find((item) => (item.id || item._id) === pId);
