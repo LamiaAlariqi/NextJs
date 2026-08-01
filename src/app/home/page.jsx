@@ -23,14 +23,7 @@ export default function HomePage() {
       .then((data) => {
         if (data?.products) {
           const mapped = data.products.slice(0, 8).map((p) => {
-            let img = p.image || "";
-            if (p.title?.toLowerCase().includes("iphone") || img.toLowerCase().includes("iphone")) {
-              img = "/iphone7.png";
-            } else if (p.title?.toLowerCase().includes("bag") || img.toLowerCase().includes("bag")) {
-              img = "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=800&auto=format&fit=crop&q=80";
-            } else if (!img || (!img.startsWith("http") && !img.startsWith("/"))) {
-              img = "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&auto=format&fit=crop&q=80";
-            }
+            const img = p.image && p.image.trim() !== "" ? p.image : "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&auto=format&fit=crop&q=80";
             return {
               id: p._id,
               name: p.title,

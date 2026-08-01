@@ -73,14 +73,7 @@ export default function ProductDetailPage({ params }) {
       if (!result.success || !result.product) return null;
 
       const data = result.product;
-      let img = data.image || "";
-      if (data.title?.toLowerCase().includes("iphone") || img.toLowerCase().includes("iphone")) {
-        img = "/iphone7.png";
-      } else if (data.title?.toLowerCase().includes("bag") || img.toLowerCase().includes("bag")) {
-        img = "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=800&auto=format&fit=crop&q=80";
-      } else if (!img || (!img.startsWith("http") && !img.startsWith("/"))) {
-        img = "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&auto=format&fit=crop&q=80";
-      }
+      const img = data.image && data.image.trim() !== "" ? data.image : "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&auto=format&fit=crop&q=80";
 
       const availableStock = Number(data.stocks) >= 0 ? Number(data.stocks) : 10;
 
