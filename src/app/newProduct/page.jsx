@@ -4,19 +4,6 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useCart } from "@/context/CartContext";
 
-// Lightweight custom axios wrapper around native fetch to maintain original code pattern
-// without requiring installing external packages.
-const axios = {
-  get: async (url) => {
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`Request failed with status ${response.status}`);
-    }
-    const data = await response.json();
-    return { data };
-  }
-};
-
 const formatCategoryName = (cat) => {
   if (!cat) return "";
   return cat
@@ -27,7 +14,7 @@ const formatCategoryName = (cat) => {
 
 const NewProducts = () => {
   const { addToCart } = useCart();
-  const [products, setproducts] = useState([]);
+  const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -35,11 +22,35 @@ const NewProducts = () => {
     try {
       setLoading(true);
       setError("");
-      const response = await axios.get("https://dummyjson.com/products");
-      console.log(response);
-      setproducts(response.data.products);
-    } catch (error) {
-      console.error("Error fetching products:", error);
+      const response = await fetch("/api/products");
+      const data = await response.json();
+
+      if (response.ok && data.success && data.products) {
+        const mapped = data.products.map((p) => {
+          let img = p.image || "";
+          if (p.title?.toLowerCase().includes("iphone") || img.toLowerCase().includes("iphone")) {
+            img = "/iphone7.png";
+          } else if (p.title?.toLowerCase().includes("bag") || img.toLowerCase().includes("bag")) {
+            img = "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=800&auto=format&fit=crop&q=80";
+          } else if (!img || (!img.startsWith("http") && !img.startsWith("/"))) {
+            img = "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&auto=format&fit=crop&q=80";
+          }
+          return {
+            id: p._id,
+            title: p.title,
+            price: Math.round(Number(p.price) || 0),
+            category: p.category,
+            thumbnail: img,
+            description: p.description,
+            stocks: p.stocks || 10,
+          };
+        });
+        setProducts(mapped);
+      } else {
+        throw new Error(data.message || "Failed to load new arrivals");
+      }
+    } catch (err) {
+      console.error("Error fetching products:", err);
       setError("Unable to retrieve the new arrivals collection. Please try again.");
     } finally {
       setLoading(false);
@@ -58,14 +69,14 @@ const NewProducts = () => {
       <div className="max-w-7xl mx-auto flex flex-col gap-12">
         {/* Header */}
         <div className="flex flex-col items-center text-center gap-4 animate-fade-in">
-          <span className="text-xs font-bold tracking-[0.3em] uppercase text-primary bg-primary/10 px-4 py-1.5 rounded-full">
+          <span className="text-xs font-bold tracking-[0.3em] uppercase text-primary bg-primary/10 px-4 py-1.5 rounded-full border border-primary/20">
             New Arrivals
           </span>
           <h1 className="text-4xl sm:text-5xl font-bold tracking-tight">
             Aura <span className="gradient-text font-extrabold">Showcase</span>
           </h1>
           <p className="text-xs sm:text-sm text-muted-foreground max-w-md">
-            Explore the latest additions to the global collection, curated for quality and minimalist design.
+            Explore the latest additions to our store, curated for quality and minimalist design.
           </p>
         </div>
 
@@ -110,13 +121,12 @@ const NewProducts = () => {
             {products.map((prod) => (
               <div
                 key={prod.id}
-                className="group relative rounded-[2rem] border border-border/40 glass p-5 flex flex-col justify-between hover:border-primary/40 transition-colors duration-300 animate-fade-in"
+                className="group relative rounded-[2rem] border border-border/40 glass p-5 flex flex-col justify-between hover:border-primary/40 transition-colors duration-300 animate-fade-in shadow-md"
               >
                 {/* Image & Actions Overlay */}
-                <div className="h-56 rounded-xl overflow-hidden bg-white/60 dark:bg-muted/30 flex items-center justify-center relative mb-5 p-4 border border-border/10">
-                  {/* Condition Badge */}
-                  <span className="absolute top-3 left-3 z-10 text-[10px] font-bold tracking-wider px-3 py-1 rounded-full bg-background/80 backdrop-blur-md border border-border/60 text-foreground shadow-sm">
-                    {prod.id % 2 === 0 ? "🟢 New" : "🟠 Used - Excellent"}
+                <div className="h-56 rounded-xl overflow-hidden bg-muted/30 flex items-center justify-center relative mb-5 p-4 border border-border/10">
+                  <span className="absolute top-3 left-3 z-10 text-[10px] font-bold tracking-widest text-primary bg-primary/10 border border-primary/20 backdrop-blur-md px-3 py-1 rounded-full uppercase">
+                    {prod.category}
                   </span>
 
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -127,7 +137,7 @@ const NewProducts = () => {
                   />
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3 z-20">
                     <Link
-                      href={`/newProduct/${prod.id}`}
+                      href={`/products/${prod.id}`}
                       className="bg-card text-card-foreground p-3 rounded-full hover:bg-primary hover:text-primary-foreground transition-colors shadow-lg cursor-pointer flex items-center justify-center"
                       title="View Details"
                     >
@@ -137,11 +147,11 @@ const NewProducts = () => {
                     </Link>
                     <button
                       onClick={() => addToCart({
-                        id: `dummy-${prod.id}`,
+                        id: prod.id,
                         name: prod.title,
-                        price: Math.round(prod.price),
+                        price: prod.price,
                         image: prod.thumbnail,
-                        category: formatCategoryName(prod.category)
+                        category: prod.category
                       })}
                       className="bg-primary text-primary-foreground p-3 rounded-full hover:opacity-95 transition-opacity shadow-lg cursor-pointer"
                       title="Add to Cart"
@@ -157,9 +167,9 @@ const NewProducts = () => {
                 <div>
                   <div className="flex justify-between items-start mb-1.5 gap-2">
                     <h3 className="text-sm font-semibold text-foreground line-clamp-1 flex-1 hover:text-primary transition-colors">
-                      <Link href={`/newProduct/${prod.id}`}>{prod.title}</Link>
+                      <Link href={`/products/${prod.id}`}>{prod.title}</Link>
                     </h3>
-                    <span className="text-sm font-bold text-foreground shrink-0">${Math.round(prod.price)}</span>
+                    <span className="text-sm font-bold text-foreground shrink-0">${prod.price}</span>
                   </div>
                   <p className="text-xs text-muted-foreground mb-1">{formatCategoryName(prod.category)}</p>
                   <p className="text-[10px] text-muted-foreground/80 line-clamp-2 leading-relaxed">
@@ -171,11 +181,11 @@ const NewProducts = () => {
                 <div className="mt-4 flex gap-2">
                   <button
                     onClick={() => addToCart({
-                      id: `dummy-${prod.id}`,
+                      id: prod.id,
                       name: prod.title,
-                      price: Math.round(prod.price),
+                      price: prod.price,
                       image: prod.thumbnail,
-                      category: formatCategoryName(prod.category)
+                      category: prod.category
                     })}
                     className="flex-1 text-center bg-primary text-primary-foreground font-semibold py-2.5 rounded-xl hover:opacity-90 transition-opacity text-xs tracking-wider cursor-pointer"
                   >
