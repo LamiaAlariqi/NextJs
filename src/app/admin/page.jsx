@@ -157,7 +157,7 @@ export default function AdminDashboardPage() {
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
   useEffect(() => {
-    const checkAuthAndSync = () => {
+    const checkAuthAndSync = async () => {
       const savedUser = localStorage.getItem("aura_user");
       if (!savedUser) {
         // User logged out -> Redirect to Login immediately!
@@ -172,7 +172,29 @@ export default function AdminDashboardPage() {
           return;
         }
 
-        // Check initial cached role
+        // Try syncing live DB role first!
+        const userId = u._id || u.id;
+        if (userId) {
+          try {
+            const res = await fetch(`/api/users/${userId}`);
+            const data = await res.json();
+            if (data?.user) {
+              const liveRole = (data.user.role || "").toLowerCase().trim().replace(/[\s_]/g, "");
+              if (liveRole === "user" || liveRole === "customer") {
+                router.push("/home");
+                return;
+              }
+              setCurrentUser(data.user);
+              localStorage.setItem("aura_user", JSON.stringify(data.user));
+              setIsCheckingAuth(false);
+              return;
+            }
+          } catch (err) {
+            console.error("Error fetching live user role:", err);
+          }
+        }
+
+        // Fallback to cached role
         const cachedRole = (u.role || "").toLowerCase().trim().replace(/[\s_]/g, "");
         if (cachedRole === "user" || cachedRole === "customer") {
           router.push("/home");
@@ -180,28 +202,7 @@ export default function AdminDashboardPage() {
         }
 
         setCurrentUser(u);
-
-        // Sync live profile from MongoDB
-        const userId = u._id || u.id;
-        if (userId) {
-          fetch(`/api/users/${userId}`)
-            .then((res) => res.json())
-            .then((data) => {
-              if (data?.user) {
-                const liveRole = (data.user.role || "").toLowerCase().trim().replace(/[\s_]/g, "");
-                if (liveRole === "user" || liveRole === "customer") {
-                  router.push("/home");
-                  return;
-                }
-                setCurrentUser(data.user);
-                localStorage.setItem("aura_user", JSON.stringify(data.user));
-              }
-            })
-            .catch((e) => console.error("Failed to sync fresh user role", e))
-            .finally(() => setIsCheckingAuth(false));
-        } else {
-          setIsCheckingAuth(false);
-        }
+        setIsCheckingAuth(false);
       } catch (e) {
         console.error(e);
         router.push("/Login");

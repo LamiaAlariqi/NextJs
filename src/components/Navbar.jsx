@@ -76,6 +76,14 @@ export default function Navbar() {
   }, []);
 
   const activeUser = session?.user || localUser;
+  const roleClean = (activeUser?.role || "").toLowerCase().trim().replace(/[\s_]/g, "");
+  const canAccessDashboard =
+    roleClean === "admin" ||
+    roleClean === "superadmin" ||
+    roleClean === "moderator" ||
+    roleClean.includes("admin") ||
+    roleClean.includes("super") ||
+    Boolean(activeUser?.isAdmin);
 
   const handleLogout = () => {
     localStorage.removeItem("aura_user");
@@ -138,7 +146,7 @@ export default function Navbar() {
             >
               Contact
             </Link>
-            {(activeUser?.role === "admin" || activeUser?.isAdmin) && (
+            {canAccessDashboard && (
               <Link
                 href="/admin"
                 className={`text-xs font-semibold tracking-wider uppercase transition-colors duration-200 hover:text-primary ${
@@ -287,7 +295,7 @@ export default function Navbar() {
                       >
                         My Profile
                       </Link>
-                      {(activeUser?.role === "admin" || activeUser?.isAdmin) && (
+                      {canAccessDashboard && (
                         <Link
                           href="/admin"
                           onClick={() => setIsUserMenuOpen(false)}
