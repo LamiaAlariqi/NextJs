@@ -2,59 +2,34 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
 export default function AdminDashboardPage() {
-  const sessionContext = useSession();
-  const session = sessionContext?.data;
-  const [currentUser, setCurrentUser] = useState(null);
-  const [isCheckingUser, setIsCheckingUser] = useState(true);
+  const router = useRouter();
+  const [activeTab, setActiveTab] = useState("overview"); // overview, products, users, orders
+  const [notification, setNotification] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
 
-  const [activeTab, setActiveTab] = useState("overview"); // "overview", "pending", "products", "users"
-  const [pendingProducts, setPendingProducts] = useState([]);
   const [approvedProducts, setApprovedProducts] = useState([]);
   const [users, setUsers] = useState([]);
   const [adminOrders, setAdminOrders] = useState([]);
 
-  const [searchTerm, setSearchTerm] = useState("");
-  const [notification, setNotification] = useState("");
+  // Edit Product Modal State
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [editFormData, setEditFormData] = useState({
+    title: "",
+    price: "",
+    category: "",
+    image: "",
+    description: "",
+    stocks: 1,
+  });
+  const [isUpdating, setIsUpdating] = useState(false);
 
   const showToast = (msg) => {
     setNotification(msg);
-    setTimeout(() => setNotification(""), 3000);
+    setTimeout(() => setNotification(""), 3500);
   };
-
-  const handleUpdateOrderStatus = (orderId, newStatus) => {
-    setAdminOrders((prev) =>
-      prev.map((o) => (o.id === orderId ? { ...o, status: newStatus } : o))
-    );
-    showToast(`Order #${orderId} status updated to "${newStatus}".`);
-  };
-
-  useEffect(() => {
-    // Check logged in user role
-    const checkUserRole = () => {
-      if (session?.user) {
-        setCurrentUser(session.user);
-      } else {
-        const savedUser = localStorage.getItem("aura_user");
-        if (savedUser) {
-          try {
-            setCurrentUser(JSON.parse(savedUser));
-          } catch (e) {
-            setCurrentUser(null);
-          }
-        } else {
-          setCurrentUser(null);
-        }
-      }
-      setIsCheckingUser(false);
-    };
-
-    checkUserRole();
-    window.addEventListener("aura_login_state_change", checkUserRole);
-    return () => window.removeEventListener("aura_login_state_change", checkUserRole);
-  }, [session?.user]);
 
   useEffect(() => {
     // Fetch products
@@ -62,10 +37,7 @@ export default function AdminDashboardPage() {
       .then((res) => res.json())
       .then((data) => {
         if (data?.products) {
-          const approved = data.products.filter((p) => p.isApproved !== false);
-          const pending = data.products.filter((p) => p.isApproved === false);
-          setApprovedProducts(approved);
-          setPendingProducts(pending);
+          setApprovedProducts(data.products);
         }
       })
       .catch((e) => console.error("Failed to load products", e));
@@ -91,49 +63,6 @@ export default function AdminDashboardPage() {
       .catch((e) => console.error("Failed to load orders", e));
   }, []);
 
-  const handleApprove = async (product) => {
-    const pId = product._id || product.id;
-    try {
-      const res = await fetch(`/api/products/${pId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ isApproved: true }),
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        setPendingProducts((prev) => prev.filter((p) => (p._id || p.id) !== pId));
-        setApprovedProducts((prev) => [
-          { ...product, isApproved: true, status: "Approved & Live" },
-          ...prev,
-        ]);
-        showToast(`✓ "${product.title}" has been approved and is now Live in Store!`);
-      } else {
-        showToast(`✕ Failed to approve product in database.`);
-      }
-    } catch (e) {
-      console.error(e);
-      showToast(`✕ Error connecting to API server.`);
-    }
-  };
-
-  const handleReject = async (productId, title) => {
-    try {
-      const res = await fetch(`/api/products/${productId}`, {
-        method: "DELETE",
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        setPendingProducts((prev) => prev.filter((p) => (p._id || p.id) !== productId));
-        showToast(`✕ Listing "${title}" was rejected and removed.`);
-      } else {
-        showToast(`✕ Failed to reject listing.`);
-      }
-    } catch (e) {
-      console.error(e);
-      showToast(`✕ Error connecting to API server.`);
-    }
-  };
-
   const handleDeleteProduct = async (productId, title) => {
     if (!confirm(`Are you sure you want to delete "${title}"?`)) return;
     try {
@@ -143,7 +72,7 @@ export default function AdminDashboardPage() {
       const data = await res.json();
       if (res.ok && data.success) {
         setApprovedProducts((prev) => prev.filter((p) => (p._id || p.id) !== productId));
-        showToast(`Deleted "${title}".`);
+        showToast(`🗑️ "${title}" deleted successfully.`);
       } else {
         showToast(`✕ Failed to delete product.`);
       }
@@ -153,24 +82,62 @@ export default function AdminDashboardPage() {
     }
   };
 
-  const handleToggleRole = async (userId, currentRole) => {
-    const newRole = currentRole === "admin" ? "user" : "admin";
+  const handleOpenEditModal = (product) => {
+    setEditingProduct(product);
+    setEditFormData({
+      title: product.title || "",
+      price: product.price || "",
+      category: product.category || "",
+      image: product.image || "",
+      description: product.description || "",
+      stocks: product.stocks || 1,
+    });
+  };
+
+  const handleSaveProductEdit = async (e) => {
+    e.preventDefault();
+    if (!editingProduct) return;
+
+    const productId = editingProduct._id || editingProduct.id;
+    setIsUpdating(true);
+
     try {
-      const res = await fetch(`/api/users/${userId}`, {
+      const res = await fetch(`/api/products/${productId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ role: newRole }),
+        body: JSON.stringify(editFormData),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setApprovedProducts((prev) =>
+          prev.map((p) => ((p._id || p.id) === productId ? { ...p, ...editFormData } : p))
+        );
+        showToast(`✓ "${editFormData.title}" updated successfully!`);
+        setEditingProduct(null);
+      } else {
+        showToast(`✕ Failed to update product: ${data.message || "Unknown error"}`);
+      }
+    } catch (err) {
+      console.error(err);
+      showToast(`✕ Error connecting to server.`);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleDeleteUser = async (userId, userName) => {
+    if (!confirm(`Are you sure you want to remove user "${userName}"?`)) return;
+    try {
+      const res = await fetch(`/api/users/${userId}`, {
+        method: "DELETE",
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        setUsers((prev) =>
-          prev.map((u) =>
-            (u._id || u.id) === userId ? { ...u, role: newRole } : u
-          )
-        );
-        showToast(`User role updated to "${newRole}".`);
+        setUsers((prev) => prev.filter((u) => (u._id || u.id) !== userId));
+        showToast(`✓ User "${userName}" was removed.`);
       } else {
-        showToast(`✕ Failed to update user role.`);
+        showToast(`✕ Failed to remove user.`);
       }
     } catch (e) {
       console.error(e);
@@ -183,6 +150,23 @@ export default function AdminDashboardPage() {
       p.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       p.category?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const totalStoreValue = approvedProducts.reduce(
+    (acc, p) => acc + (Number(p.price) || 0) * (Number(p.stocks) || 1),
+    0
+  );
+
+  const CATEGORY_OPTIONS = [
+    "Electronics",
+    "Furniture",
+    "Cars",
+    "Makeup & Beauty",
+    "Clothing & Fashion",
+    "Audio",
+    "Wearables",
+    "Ambient Home",
+    "Other Categories"
+  ];
 
   return (
     <div className="flex flex-col lg:flex-row min-h-screen bg-[#0d0f17] text-slate-100 font-sans">
@@ -215,10 +199,11 @@ export default function AdminDashboardPage() {
           <nav className="flex flex-row lg:flex-col gap-1.5 overflow-x-auto pb-2 lg:pb-0">
             <button
               onClick={() => setActiveTab("overview")}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${activeTab === "overview"
-                ? "bg-purple-600 text-white shadow-lg shadow-purple-600/30"
-                : "text-slate-400 hover:bg-[#1a1e30] hover:text-white"
-                }`}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                activeTab === "overview"
+                  ? "bg-purple-600 text-white shadow-lg shadow-purple-600/30"
+                  : "text-slate-400 hover:bg-[#1a1e30] hover:text-white"
+              }`}
             >
               <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
@@ -227,31 +212,12 @@ export default function AdminDashboardPage() {
             </button>
 
             <button
-              onClick={() => setActiveTab("pending")}
-              className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${activeTab === "pending"
-                ? "bg-amber-500 text-white shadow-lg shadow-amber-500/30"
-                : "text-slate-400 hover:bg-[#1a1e30] hover:text-white"
-                }`}
-            >
-              <div className="flex items-center gap-3">
-                <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span>Pending Approvals</span>
-              </div>
-              {pendingProducts.length > 0 && (
-                <span className="bg-white/20 text-white text-[10px] px-2 py-0.5 rounded-full font-black">
-                  {pendingProducts.length}
-                </span>
-              )}
-            </button>
-
-            <button
               onClick={() => setActiveTab("products")}
-              className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${activeTab === "products"
-                ? "bg-purple-600 text-white shadow-lg shadow-purple-600/30"
-                : "text-slate-400 hover:bg-[#1a1e30] hover:text-white"
-                }`}
+              className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                activeTab === "products"
+                  ? "bg-purple-600 text-white shadow-lg shadow-purple-600/30"
+                  : "text-slate-400 hover:bg-[#1a1e30] hover:text-white"
+              }`}
             >
               <div className="flex items-center gap-3">
                 <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -264,10 +230,11 @@ export default function AdminDashboardPage() {
 
             <button
               onClick={() => setActiveTab("users")}
-              className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${activeTab === "users"
-                ? "bg-purple-600 text-white shadow-lg shadow-purple-600/30"
-                : "text-slate-400 hover:bg-[#1a1e30] hover:text-white"
-                }`}
+              className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                activeTab === "users"
+                  ? "bg-purple-600 text-white shadow-lg shadow-purple-600/30"
+                  : "text-slate-400 hover:bg-[#1a1e30] hover:text-white"
+              }`}
             >
               <div className="flex items-center gap-3">
                 <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -280,10 +247,11 @@ export default function AdminDashboardPage() {
 
             <button
               onClick={() => setActiveTab("orders")}
-              className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${activeTab === "orders"
-                ? "bg-purple-600 text-white shadow-lg shadow-purple-600/30"
-                : "text-slate-400 hover:bg-[#1a1e30] hover:text-white"
-                }`}
+              className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                activeTab === "orders"
+                  ? "bg-purple-600 text-white shadow-lg shadow-purple-600/30"
+                  : "text-slate-400 hover:bg-[#1a1e30] hover:text-white"
+              }`}
             >
               <div className="flex items-center gap-3">
                 <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -308,33 +276,31 @@ export default function AdminDashboardPage() {
             </div>
           </div>
           <Link
-            href="/products"
-            className="w-full text-center py-2 text-[10px] font-bold tracking-wider text-slate-400 hover:text-white uppercase transition-colors"
+            href="/home"
+            className="text-xs text-center text-slate-400 hover:text-white py-2 rounded-xl transition-colors font-medium"
           >
-            ← Back to Storefront
+            ← Exit to Store
           </Link>
         </div>
       </aside>
 
       {/* Main Content Area */}
       <main className="flex-1 p-6 lg:p-10 flex flex-col gap-8 overflow-y-auto">
-        {/* Top Header Bar */}
+        {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <span className="text-[10px] font-extrabold tracking-widest text-slate-400 uppercase">
-              Admin Portal / {activeTab.toUpperCase()}
-            </span>
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white mt-0.5">
-              Control Dashboard
-            </h1>
+            <h1 className="text-2xl font-black text-white tracking-tight">Admin Dashboard</h1>
+            <p className="text-xs text-slate-400">
+              Manage inventory, edit products, inspect users, and track live orders.
+            </p>
           </div>
 
-          <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+          <div className="flex items-center gap-3">
             <Link
               href="/addProduct"
               className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold px-5 py-2.5 rounded-2xl text-xs transition-all shadow-lg shadow-emerald-500/20 flex items-center gap-2 cursor-pointer"
             >
-              <span className="text-sm font-black">+</span> Add New Item
+              <span className="text-sm font-black">+</span> Add New Product
             </Link>
           </div>
         </div>
@@ -352,7 +318,7 @@ export default function AdminDashboardPage() {
             </div>
             <div>
               <span className="text-2xl lg:text-3xl font-black text-white">
-                ${approvedProducts.reduce((acc, p) => acc + (Number(p.price) || 0) * (Number(p.stocks) || 1), 0).toLocaleString()}
+                ${totalStoreValue.toLocaleString()}
               </span>
               <p className="text-[10px] text-emerald-400 font-semibold mt-1">● Live Inventory Total</p>
             </div>
@@ -413,20 +379,10 @@ export default function AdminDashboardPage() {
                 <h3 className="text-xs font-bold uppercase tracking-wider text-white">Quick Actions</h3>
                 <div className="flex flex-col gap-3">
                   <button
-                    onClick={() => setActiveTab("pending")}
-                    className="w-full text-left bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 p-4 rounded-2xl text-xs font-bold transition-all flex justify-between items-center cursor-pointer"
-                  >
-                    <span>Review Pending Submissions</span>
-                    <span className="bg-amber-500 text-white px-2.5 py-0.5 rounded-full text-[10px] font-black">
-                      {pendingProducts.length}
-                    </span>
-                  </button>
-
-                  <button
                     onClick={() => setActiveTab("products")}
                     className="w-full text-left bg-[#1c2134] hover:bg-[#232940] border border-[#2b324d] text-white p-4 rounded-2xl text-xs font-bold transition-all flex justify-between items-center cursor-pointer"
                   >
-                    <span>Browse Store Products</span>
+                    <span>Browse & Edit Store Products</span>
                     <span className="text-slate-400 font-semibold text-[10px]">{approvedProducts.length} items</span>
                   </button>
 
@@ -437,102 +393,38 @@ export default function AdminDashboardPage() {
                     <span>Manage Registered Users</span>
                     <span className="text-slate-400 font-semibold text-[10px]">{users.length} users</span>
                   </button>
+
+                  <button
+                    onClick={() => setActiveTab("orders")}
+                    className="w-full text-left bg-[#1c2134] hover:bg-[#232940] border border-[#2b324d] text-white p-4 rounded-2xl text-xs font-bold transition-all flex justify-between items-center cursor-pointer"
+                  >
+                    <span>Review Paid Store Orders</span>
+                    <span className="text-slate-400 font-semibold text-[10px]">{adminOrders.length} orders</span>
+                  </button>
                 </div>
               </div>
 
               {/* Status Summary Card */}
               <div className="lg:col-span-2 bg-[#141724] border border-[#24293e] rounded-3xl p-6 flex flex-col justify-between gap-6">
                 <div>
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-white mb-2">System Moderation Rules</h3>
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-white mb-2">Live Store Management</h3>
                   <p className="text-xs text-slate-300 leading-relaxed">
-                    User-submitted products are placed under review before being made public. Approved products automatically appear on the storefront.
+                    All products added via Dashboard are live and instantly available for purchase. You can edit price, stock quantity, titles, and categories at any time.
                   </p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 border-t border-[#24293e] pt-4">
                   <div>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase">Pending Approvals</span>
-                    <p className="text-xl font-extrabold text-amber-400 mt-0.5">{pendingProducts.length} Items</p>
-                  </div>
-                  <div>
                     <span className="text-[10px] font-bold text-slate-400 uppercase">Live Store Listings</span>
                     <p className="text-xl font-extrabold text-emerald-400 mt-0.5">{approvedProducts.length} Items</p>
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase">Total Inventory Value</span>
+                    <p className="text-xl font-extrabold text-purple-400 mt-0.5">${totalStoreValue.toLocaleString()}</p>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
-        )}
-
-        {/* TAB CONTENT: Pending Approvals */}
-        {activeTab === "pending" && (
-          <div className="flex flex-col gap-6 animate-fade-in">
-            <div className="flex justify-between items-center">
-              <div>
-                <h2 className="text-lg font-bold text-white">Items Waiting For Approval</h2>
-                <p className="text-xs text-slate-400">
-                  Review products submitted by store sellers before making them public.
-                </p>
-              </div>
-            </div>
-
-            {pendingProducts.length === 0 ? (
-              <div className="bg-[#141724] p-12 rounded-3xl border border-[#24293e] text-center flex flex-col items-center gap-3">
-                <h3 className="text-base font-bold text-white">No Pending Products</h3>
-                <p className="text-xs text-slate-400 max-w-sm">
-                  All submitted products have been reviewed and processed.
-                </p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {pendingProducts.map((prod) => (
-                  <div
-                    key={prod._id || prod.id}
-                    className="bg-[#141724] rounded-3xl border border-amber-500/30 p-5 flex flex-col justify-between gap-4 shadow-xl relative overflow-hidden"
-                  >
-                    <span className="absolute top-4 left-4 z-10 text-[9px] font-extrabold uppercase px-3 py-1 rounded-full bg-amber-500 text-white shadow-md">
-                      Pending Approval
-                    </span>
-
-                    <div className="h-44 rounded-2xl overflow-hidden bg-[#1c2134] flex items-center justify-center relative p-3">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={prod.image}
-                        alt={prod.title}
-                        className="max-h-full max-w-full object-contain"
-                      />
-                    </div>
-
-                    <div className="flex flex-col gap-1.5">
-                      <span className="text-[10px] font-extrabold text-purple-400 uppercase">
-                        {prod.category} • {prod.condition || "New"}
-                      </span>
-                      <h3 className="text-sm font-bold text-white line-clamp-1">{prod.title}</h3>
-                      <div className="flex justify-between items-center text-xs mt-1">
-                        <span className="text-slate-400">Price:</span>
-                        <span className="font-extrabold text-white text-sm">${prod.price}</span>
-                      </div>
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div className="flex gap-2 pt-2 border-t border-[#24293e]">
-                      <button
-                        onClick={() => handleApprove(prod)}
-                        className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2.5 rounded-xl transition-all text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-md shadow-emerald-500/20"
-                      >
-                        ✓ Approve
-                      </button>
-                      <button
-                        onClick={() => handleReject(prod._id || prod.id, prod.title)}
-                        className="flex-1 bg-red-500/10 hover:bg-red-500 hover:text-white border border-red-500/30 text-red-400 font-bold py-2.5 rounded-xl transition-all text-xs flex items-center justify-center gap-1.5 cursor-pointer"
-                      >
-                        ✕ Reject
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
         )}
 
@@ -543,7 +435,7 @@ export default function AdminDashboardPage() {
               <div>
                 <h2 className="text-lg font-bold text-white">Active Store Products</h2>
                 <p className="text-xs text-slate-400">
-                  Browse and manage all live items published on the store.
+                  Browse, edit product details/prices/stocks, or remove items from the store.
                 </p>
               </div>
 
@@ -560,7 +452,7 @@ export default function AdminDashboardPage() {
             {filteredProducts.length === 0 ? (
               <div className="bg-[#141724] p-12 rounded-3xl border border-[#24293e] text-center flex flex-col items-center gap-3">
                 <h3 className="text-base font-bold text-white">No Products Found</h3>
-                <p className="text-xs text-slate-400">There are currently no active products in the store.</p>
+                <p className="text-xs text-slate-400">There are currently no active products matching your search.</p>
               </div>
             ) : (
               <div className="bg-[#141724] rounded-3xl border border-[#24293e] overflow-hidden shadow-sm">
@@ -571,7 +463,7 @@ export default function AdminDashboardPage() {
                         <th className="py-4 px-6">Product</th>
                         <th className="py-4 px-6">Category</th>
                         <th className="py-4 px-6">Price</th>
-                        <th className="py-4 px-6">Status</th>
+                        <th className="py-4 px-6">Stock</th>
                         <th className="py-4 px-6 text-right">Actions</th>
                       </tr>
                     </thead>
@@ -587,18 +479,22 @@ export default function AdminDashboardPage() {
                           </td>
                           <td className="py-4 px-6 text-slate-300">{prod.category}</td>
                           <td className="py-4 px-6 font-black text-white">${prod.price}</td>
-                          <td className="py-4 px-6">
-                            <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
-                              ● Live Store
-                            </span>
-                          </td>
+                          <td className="py-4 px-6 font-semibold text-emerald-400">{prod.stocks || 1} in stock</td>
                           <td className="py-4 px-6 text-right">
-                            <button
-                              onClick={() => handleDeleteProduct(prod._id || prod.id, prod.title)}
-                              className="bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer"
-                            >
-                              Delete
-                            </button>
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                onClick={() => handleOpenEditModal(prod)}
+                                className="bg-purple-500/10 hover:bg-purple-600 text-purple-300 hover:text-white px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border border-purple-500/30 flex items-center gap-1"
+                              >
+                                ✏️ Edit
+                              </button>
+                              <button
+                                onClick={() => handleDeleteProduct(prod._id || prod.id, prod.title)}
+                                className="bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border border-red-500/30 flex items-center gap-1"
+                              >
+                                🗑️ Delete
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -613,76 +509,11 @@ export default function AdminDashboardPage() {
         {/* TAB CONTENT: User Management */}
         {activeTab === "users" && (
           <div className="flex flex-col gap-6 animate-fade-in">
-            <div>
-              <h2 className="text-lg font-bold text-white">Store Members & Roles</h2>
-              <p className="text-xs text-slate-400">
-                Manage registered user accounts and admin privileges.
-              </p>
-            </div>
-
-            {users.length === 0 ? (
-              <div className="bg-[#141724] p-12 rounded-3xl border border-[#24293e] text-center flex flex-col items-center gap-3">
-                <h3 className="text-base font-bold text-white">No Registered Users</h3>
-                <p className="text-xs text-slate-400">User list will automatically populate when users register.</p>
+            <div className="flex justify-between items-center">
+              <div>
+                <h2 className="text-lg font-bold text-white">Registered Members</h2>
+                <p className="text-xs text-slate-400">View user accounts and manage customer access.</p>
               </div>
-            ) : (
-              <div className="bg-[#141724] rounded-3xl border border-[#24293e] overflow-hidden shadow-sm">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr className="border-b border-[#24293e] bg-[#1a1e2e] text-[10px] font-extrabold text-slate-300 uppercase tracking-wider">
-                        <th className="py-4 px-6">User</th>
-                        <th className="py-4 px-6">Email</th>
-                        <th className="py-4 px-6">Role</th>
-                        <th className="py-4 px-6 text-right">Action</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[#24293e] text-xs">
-                      {users.map((usr) => (
-                        <tr key={usr._id || usr.id} className="hover:bg-[#1a1e2e] transition-colors">
-                          <td className="py-4 px-6 font-semibold text-white flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-full bg-purple-500/20 text-purple-300 font-bold text-xs flex items-center justify-center border border-purple-500/30">
-                              {usr.name ? usr.name.charAt(0).toUpperCase() : "U"}
-                            </div>
-                            {usr.name || "Anonymous User"}
-                          </td>
-                          <td className="py-4 px-6 text-slate-300">{usr.email}</td>
-                          <td className="py-4 px-6">
-                            <span
-                              className={`text-[10px] font-extrabold px-3 py-1 rounded-full uppercase ${usr.role === "admin"
-                                ? "bg-purple-500/20 text-purple-300 border border-purple-500/30"
-                                : "bg-[#1c2134] text-slate-300"
-                                }`}
-                            >
-                              {usr.role || "user"}
-                            </span>
-                          </td>
-                          <td className="py-4 px-6 text-right">
-                            <button
-                              onClick={() => handleToggleRole(usr._id || usr.id, usr.role)}
-                              className="border border-[#2b324d] hover:bg-[#1c2134] text-white px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer"
-                            >
-                              Toggle Role ({usr.role === "admin" ? "Make User" : "Make Admin"})
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* TAB CONTENT: Orders Management */}
-        {activeTab === "orders" && (
-          <div className="flex flex-col gap-6 animate-fade-in">
-            <div>
-              <h2 className="text-lg font-bold text-white">Store Orders & Logistics</h2>
-              <p className="text-xs text-slate-400">
-                Track customer purchases and update order fulfillment status.
-              </p>
             </div>
 
             <div className="bg-[#141724] rounded-3xl border border-[#24293e] overflow-hidden shadow-sm">
@@ -690,47 +521,27 @@ export default function AdminDashboardPage() {
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="border-b border-[#24293e] bg-[#1a1e2e] text-[10px] font-extrabold text-slate-300 uppercase tracking-wider">
-                      <th className="py-4 px-6">Order ID</th>
-                      <th className="py-4 px-6">Customer</th>
-                      <th className="py-4 px-6">Date</th>
-                      <th className="py-4 px-6">Total</th>
-                      <th className="py-4 px-6">Current Status</th>
-                      <th className="py-4 px-6 text-right">Update Status</th>
+                      <th className="py-4 px-6">User</th>
+                      <th className="py-4 px-6">Email</th>
+                      <th className="py-4 px-6">Joined Date</th>
+                      <th className="py-4 px-6 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#24293e] text-xs">
-                    {adminOrders.map((ord) => (
-                      <tr key={ord.id} className="hover:bg-[#1a1e2e] transition-colors">
-                        <td className="py-4 px-6 font-bold text-white">{ord.id}</td>
-                        <td className="py-4 px-6 text-slate-300">{ord.customer}</td>
-                        <td className="py-4 px-6 text-slate-400">{ord.date}</td>
-                        <td className="py-4 px-6 font-extrabold text-white">${ord.total}</td>
-                        <td className="py-4 px-6">
-                          <span
-                            className={`text-[10px] font-extrabold px-3 py-1 rounded-full uppercase ${
-                              ord.status === "Delivered"
-                                ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
-                                : ord.status === "Shipped"
-                                ? "bg-blue-500/20 text-blue-300 border border-blue-500/30"
-                                : ord.status === "Processing"
-                                ? "bg-amber-500/20 text-amber-300 border border-amber-500/30"
-                                : "bg-red-500/20 text-red-300 border border-red-500/30"
-                            }`}
-                          >
-                            ● {ord.status}
-                          </span>
+                    {users.map((u) => (
+                      <tr key={u._id || u.id} className="hover:bg-[#1a1e2e] transition-colors">
+                        <td className="py-4 px-6 font-semibold text-white">{u.name}</td>
+                        <td className="py-4 px-6 text-slate-300">{u.email}</td>
+                        <td className="py-4 px-6 text-slate-400">
+                          {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : "Active Customer"}
                         </td>
                         <td className="py-4 px-6 text-right">
-                          <select
-                            value={ord.status}
-                            onChange={(e) => handleUpdateOrderStatus(ord.id, e.target.value)}
-                            className="bg-[#1c2134] border border-[#2b324d] text-white text-xs rounded-xl px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-purple-500 cursor-pointer"
+                          <button
+                            onClick={() => handleDeleteUser(u._id || u.id, u.name)}
+                            className="bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border border-red-500/30"
                           >
-                            <option value="Processing" className="bg-[#141724]">Processing</option>
-                            <option value="Shipped" className="bg-[#141724]">Shipped / In Transit</option>
-                            <option value="Delivered" className="bg-[#141724]">Delivered</option>
-                            <option value="Cancelled" className="bg-[#141724]">Cancelled</option>
-                          </select>
+                            Remove
+                          </button>
                         </td>
                       </tr>
                     ))}
@@ -740,7 +551,166 @@ export default function AdminDashboardPage() {
             </div>
           </div>
         )}
+
+        {/* TAB CONTENT: Orders */}
+        {activeTab === "orders" && (
+          <div className="flex flex-col gap-6 animate-fade-in">
+            <div className="flex justify-between items-center">
+              <div>
+                <h2 className="text-lg font-bold text-white">Store Orders Log</h2>
+                <p className="text-xs text-slate-400">Track paid orders and fulfillment status across all customers.</p>
+              </div>
+            </div>
+
+            {adminOrders.length === 0 ? (
+              <div className="bg-[#141724] p-12 rounded-3xl border border-[#24293e] text-center flex flex-col items-center gap-3">
+                <h3 className="text-base font-bold text-white">No Orders Placed Yet</h3>
+                <p className="text-xs text-slate-400">Customer orders will show here once completed via Stripe.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-4">
+                {adminOrders.map((ord) => (
+                  <div
+                    key={ord._id || ord.id}
+                    className="bg-[#141724] border border-[#24293e] p-6 rounded-3xl flex flex-col gap-4 justify-between"
+                  >
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-[#24293e] pb-3">
+                      <div>
+                        <span className="text-xs font-bold text-white">Order #{ord.orderId || ord._id}</span>
+                        <p className="text-[10px] text-slate-400">Customer: {ord.userEmail || "Guest Customer"}</p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-black text-emerald-400">${ord.totalAmount}</span>
+                        <span className="text-[10px] font-extrabold uppercase bg-emerald-500/10 text-emerald-400 px-3 py-1 rounded-full border border-emerald-500/20">
+                          {ord.paymentStatus || "Paid"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </main>
+
+      {/* EDIT PRODUCT MODAL */}
+      {editingProduct && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setEditingProduct(null)}
+        >
+          <div
+            className="bg-[#141724] border border-[#2c334e] max-w-xl w-full rounded-3xl p-6 sm:p-8 shadow-2xl relative flex flex-col gap-6 animate-fade-in text-white"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center border-b border-[#2c334e] pb-4">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <span>✏️ Edit Product Details</span>
+              </h3>
+              <button
+                onClick={() => setEditingProduct(null)}
+                className="text-slate-400 hover:text-white p-1 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveProductEdit} className="flex flex-col gap-4">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Product Title *</label>
+                <input
+                  type="text"
+                  value={editFormData.title}
+                  onChange={(e) => setEditFormData({ ...editFormData, title: e.target.value })}
+                  className="bg-[#1c2134] border border-[#2c334e] rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-purple-500"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Price ($ USD) *</label>
+                  <input
+                    type="number"
+                    value={editFormData.price}
+                    onChange={(e) => setEditFormData({ ...editFormData, price: e.target.value })}
+                    className="bg-[#1c2134] border border-[#2c334e] rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-purple-500"
+                    required
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Stock Quantity *</label>
+                  <input
+                    type="number"
+                    value={editFormData.stocks}
+                    onChange={(e) => setEditFormData({ ...editFormData, stocks: Number(e.target.value) || 1 })}
+                    className="bg-[#1c2134] border border-[#2c334e] rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-purple-500"
+                    min="0"
+                    required
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Category *</label>
+                  <select
+                    value={editFormData.category}
+                    onChange={(e) => setEditFormData({ ...editFormData, category: e.target.value })}
+                    className="bg-[#1c2134] border border-[#2c334e] rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-purple-500 cursor-pointer"
+                    required
+                  >
+                    {CATEGORY_OPTIONS.map((cat) => (
+                      <option key={cat} value={cat} className="bg-[#141724] text-white">
+                        {cat}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Image URL *</label>
+                <input
+                  type="text"
+                  value={editFormData.image}
+                  onChange={(e) => setEditFormData({ ...editFormData, image: e.target.value })}
+                  className="bg-[#1c2134] border border-[#2c334e] rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-purple-500"
+                  required
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Description *</label>
+                <textarea
+                  value={editFormData.description}
+                  onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
+                  rows={3}
+                  className="bg-[#1c2134] border border-[#2c334e] rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-purple-500 resize-none"
+                  required
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-[#2c334e]">
+                <button
+                  type="button"
+                  onClick={() => setEditingProduct(null)}
+                  className="px-5 py-2.5 rounded-xl text-xs font-bold bg-[#1c2134] text-slate-300 hover:text-white border border-[#2c334e] cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isUpdating}
+                  className="px-6 py-2.5 rounded-xl text-xs font-bold bg-purple-600 hover:bg-purple-500 text-white shadow-lg shadow-purple-600/30 cursor-pointer disabled:opacity-50"
+                >
+                  {isUpdating ? "Saving Changes..." : "Save Product Changes"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
