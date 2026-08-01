@@ -238,12 +238,8 @@ export default function AdminDashboardPage() {
   }, [router]);
 
   const roleClean = (currentUser?.role || "").toLowerCase().trim().replace(/[\s_]/g, "");
-  const isSuperAdmin =
-    roleClean === "" ||
-    roleClean === "admin" ||
-    roleClean === "superadmin" ||
-    roleClean === "superadmin" ||
-    (roleClean.includes("admin") && !roleClean.includes("moderator"));
+  const isModerator = roleClean === "moderator";
+  const isSuperAdmin = !isModerator;
 
   const handleUpdateUserRole = async (userId, userName, newRole) => {
     try {
