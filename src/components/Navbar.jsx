@@ -121,14 +121,7 @@ export default function Navbar() {
             >
               Browse Products
             </Link>
-            <Link
-              href="/newProduct"
-              className={`text-xs font-semibold tracking-wider uppercase transition-colors duration-200 hover:text-primary ${
-                pathname === "/newProduct" ? "text-primary" : "text-muted-foreground"
-              }`}
-            >
-              New Arrivals
-            </Link>
+
             <Link
               href="/about"
               className={`text-xs font-semibold tracking-wider uppercase transition-colors duration-200 hover:text-primary ${
