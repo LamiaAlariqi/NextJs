@@ -152,6 +152,29 @@ export default function AdminDashboardPage() {
     }
   };
 
+  const handleToggleUserRole = async (userId, userName, currentRole) => {
+    const newRole = currentRole === "admin" ? "user" : "admin";
+    try {
+      const res = await fetch(`/api/users/${userId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role: newRole }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setUsers((prev) =>
+          prev.map((u) => ((u._id || u.id) === userId ? { ...u, role: newRole } : u))
+        );
+        showToast(`✓ User "${userName}" is now an ${newRole.toUpperCase()}!`);
+      } else {
+        showToast(`✕ Failed to update user role.`);
+      }
+    } catch (e) {
+      console.error(e);
+      showToast(`✕ Error connecting to API server.`);
+    }
+  };
+
   const handleDeleteUser = async (userId, userName) => {
     if (!confirm(`Are you sure you want to remove user "${userName}"?`)) return;
     try {
@@ -547,8 +570,9 @@ export default function AdminDashboardPage() {
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="border-b border-[#24293e] bg-[#1a1e2e] text-[10px] font-extrabold text-slate-300 uppercase tracking-wider">
-                      <th className="py-4 px-6">User</th>
-                      <th className="py-4 px-6">Email</th>
+                      <th className="py-4 px-6">User Name</th>
+                      <th className="py-4 px-6">Email Address</th>
+                      <th className="py-4 px-6">Account Role</th>
                       <th className="py-4 px-6">Joined Date</th>
                       <th className="py-4 px-6 text-right">Actions</th>
                     </tr>
@@ -558,16 +582,39 @@ export default function AdminDashboardPage() {
                       <tr key={u._id || u.id} className="hover:bg-[#1a1e2e] transition-colors">
                         <td className="py-4 px-6 font-semibold text-white">{u.name}</td>
                         <td className="py-4 px-6 text-slate-300">{u.email}</td>
+                        <td className="py-4 px-6">
+                          {u.role === "admin" ? (
+                            <span className="text-[10px] font-extrabold text-purple-300 bg-purple-500/20 px-3 py-1 rounded-full border border-purple-500/30">
+                              👑 Admin
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-bold text-slate-300 bg-slate-500/10 px-3 py-1 rounded-full border border-slate-500/20">
+                              👤 Customer
+                            </span>
+                          )}
+                        </td>
                         <td className="py-4 px-6 text-slate-400">
                           {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : "Active Customer"}
                         </td>
                         <td className="py-4 px-6 text-right">
-                          <button
-                            onClick={() => handleDeleteUser(u._id || u.id, u.name)}
-                            className="bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border border-red-500/30"
-                          >
-                            Remove
-                          </button>
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => handleToggleUserRole(u._id || u.id, u.name, u.role)}
+                              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+                                u.role === "admin"
+                                  ? "bg-amber-500/10 text-amber-300 hover:bg-amber-500 hover:text-white border-amber-500/30"
+                                  : "bg-purple-500/10 text-purple-300 hover:bg-purple-600 hover:text-white border-purple-500/30"
+                              }`}
+                            >
+                              {u.role === "admin" ? "Demote to User" : "Make Admin"}
+                            </button>
+                            <button
+                              onClick={() => handleDeleteUser(u._id || u.id, u.name)}
+                              className="bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border border-red-500/30"
+                            >
+                              Remove
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
