@@ -22,6 +22,13 @@ export default function AddProductPage() {
   const [success, setSuccess] = useState("");
   const [uploadMode, setUploadMode] = useState("file"); // "file" or "url"
 
+  React.useEffect(() => {
+    const savedUser = localStorage.getItem("aura_user");
+    if (!savedUser) {
+      router.push("/Login");
+    }
+  }, [router]);
+
   const CATEGORIES = [
     "Electronics",
     "Furniture",

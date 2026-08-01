@@ -157,7 +157,7 @@ export default function Navbar() {
               </Link>
             )}
             <Link
-              href="/addProduct"
+              href={activeUser ? "/addProduct" : "/Login"}
               className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 hover:bg-emerald-500 hover:text-white px-3.5 py-1.5 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
             >
               <span className="text-sm font-extrabold">+</span> Sell Item
