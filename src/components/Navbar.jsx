@@ -30,6 +30,11 @@ export default function Navbar() {
 
   const handleCheckout = async () => {
     if (cart.length === 0) return;
+    if (!activeUser) {
+      setIsCartOpen(false);
+      router.push("/Login");
+      return;
+    }
     try {
       setIsCheckingOut(true);
       const res = await fetch("/api/checkout", {
@@ -37,15 +42,21 @@ export default function Navbar() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           items: cart,
-          userEmail: activeUser?.email || "",
+          userEmail: activeUser.email,
         }),
       });
 
       const data = await res.json();
+      if (res.status === 401 || !res.ok) {
+        setIsCartOpen(false);
+        router.push("/Login");
+        setIsCheckingOut(false);
+        return;
+      }
       if (data.url) {
         window.location.href = data.url;
       } else {
-        alert(data.error || "Failed to start Stripe checkout");
+        alert(data.error || "Failed to start checkout");
         setIsCheckingOut(false);
       }
     } catch (err) {

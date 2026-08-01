@@ -1,5 +1,6 @@
 import connection from "@/app/db/conn";
 import Order from "@/app/models/orderModel";
+import Product from "@/app/models/productModel";
 import Stripe from "stripe";
 
 export async function POST(req) {
@@ -20,7 +21,7 @@ export async function POST(req) {
 
         if (session) {
           customerEmail = session.customer_email || session.metadata?.userEmail || customerEmail;
-          
+
           if (session.amount_total) {
             totalAmount = session.amount_total / 100;
           }
@@ -73,6 +74,21 @@ export async function POST(req) {
       status: "Processing",
       stripeSessionId: sessionId,
     });
+
+    // Decrement product stocks in MongoDB for purchased items
+    for (const item of orderItems) {
+      const pId = item.id || item._id;
+      if (pId) {
+        try {
+          const qty = Number(item.quantity) || 1;
+          await Product.findByIdAndUpdate(pId, {
+            $inc: { stocks: -qty },
+          });
+        } catch (stockErr) {
+          console.error(`Failed to decrement stock for product ${pId}:`, stockErr);
+        }
+      }
+    }
 
     return Response.json({
       success: true,

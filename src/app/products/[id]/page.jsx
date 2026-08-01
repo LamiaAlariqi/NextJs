@@ -75,7 +75,7 @@ export default function ProductDetailPage({ params }) {
       const data = result.product;
       const img = data.image && data.image.trim() !== "" ? data.image : "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&auto=format&fit=crop&q=80";
 
-      const availableStock = Number(data.stocks) >= 0 ? Number(data.stocks) : 10;
+      const availableStock = typeof data.stocks === "number" ? Math.max(0, data.stocks) : 10;
 
       return {
         id: data._id,
@@ -134,18 +134,31 @@ export default function ProductDetailPage({ params }) {
 
   const handleAddToCart = () => {
     if (!product || product.stocks <= 0) return;
+    const savedUser = localStorage.getItem("aura_user");
+    if (!savedUser) {
+      router.push("/Login");
+      return;
+    }
     addToCartWithQuantity(product, quantity);
   };
 
   const handleBuyNow = async () => {
     if (!product || product.stocks <= 0) return;
+    const savedUser = localStorage.getItem("aura_user");
+    if (!savedUser) {
+      router.push("/Login");
+      return;
+    }
+
     try {
       setIsBuying(true);
+      const u = JSON.parse(savedUser);
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           items: [{ ...product, quantity }],
+          userEmail: u.email || "",
         }),
       });
       const data = await res.json();

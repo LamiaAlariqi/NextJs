@@ -4,6 +4,13 @@ export async function POST(req) {
   try {
     const { items, userEmail } = await req.json();
 
+    if (!userEmail || userEmail === "guest" || userEmail.trim() === "") {
+      return Response.json(
+        { error: "Authentication required. Please sign in to your account to complete your purchase." },
+        { status: 401 }
+      );
+    }
+
     if (!items || items.length === 0) {
       return Response.json({ error: "No items provided in cart" }, { status: 400 });
     }
