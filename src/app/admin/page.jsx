@@ -368,11 +368,10 @@ export default function AdminDashboardPage() {
           <nav className="flex flex-row lg:flex-col gap-1.5 overflow-x-auto pb-2 lg:pb-0">
             <button
               onClick={() => setActiveTab("overview")}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                activeTab === "overview"
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${activeTab === "overview"
                   ? "bg-purple-600 text-white shadow-lg shadow-purple-600/30"
                   : "text-slate-400 hover:bg-[#1a1e30] hover:text-white"
-              }`}
+                }`}
             >
               <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
@@ -382,11 +381,10 @@ export default function AdminDashboardPage() {
 
             <button
               onClick={() => setActiveTab("products")}
-              className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                activeTab === "products"
+              className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${activeTab === "products"
                   ? "bg-purple-600 text-white shadow-lg shadow-purple-600/30"
                   : "text-slate-400 hover:bg-[#1a1e30] hover:text-white"
-              }`}
+                }`}
             >
               <div className="flex items-center gap-3">
                 <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -400,11 +398,10 @@ export default function AdminDashboardPage() {
             {isAdmin && (
               <button
                 onClick={() => setActiveTab("users")}
-                className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                  activeTab === "users"
+                className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${activeTab === "users"
                     ? "bg-purple-600 text-white shadow-lg shadow-purple-600/30"
                     : "text-slate-400 hover:bg-[#1a1e30] hover:text-white"
-                }`}
+                  }`}
               >
                 <div className="flex items-center gap-3">
                   <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -418,11 +415,10 @@ export default function AdminDashboardPage() {
 
             <button
               onClick={() => setActiveTab("orders")}
-              className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                activeTab === "orders"
+              className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${activeTab === "orders"
                   ? "bg-purple-600 text-white shadow-lg shadow-purple-600/30"
                   : "text-slate-400 hover:bg-[#1a1e30] hover:text-white"
-              }`}
+                }`}
             >
               <div className="flex items-center gap-3">
                 <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1034,9 +1030,9 @@ export default function AdminDashboardPage() {
                   className="bg-[#1c2134] border border-[#2c334e] rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-purple-500 cursor-pointer"
                   required
                 >
-                  <option value="customer" className="bg-[#141724]">👤 Customer (Standard User)</option>
-                  <option value="supervisor" className="bg-[#141724]">🛡️ Supervisor (Products & Orders Access)</option>
-                  <option value="admin" className="bg-[#141724]">👑 Admin (Full Access to Everything)</option>
+                  <option value="user" className="bg-[#141724]"> Customer (Standard User)</option>
+                  <option value="moderator" className="bg-[#141724]">Moderator (Products & Orders Access)</option>
+                  <option value="admin" className="bg-[#141724]">Super Admin (Full Access to Everything)</option>
                 </select>
               </div>
 
