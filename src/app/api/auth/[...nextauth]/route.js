@@ -15,6 +15,15 @@ export const authOptions = {
     }),
   ],
   callbacks: {
+    async redirect({ url, baseUrl }) {
+      if (url.startsWith("/")) return `${baseUrl}${url}`;
+      try {
+        const urlObj = new URL(url);
+        const baseObj = new URL(baseUrl);
+        if (urlObj.origin === baseObj.origin) return url;
+      } catch (e) {}
+      return baseUrl;
+    },
     async session({ session, token }) {
       if (session?.user) {
         session.user.id = token.sub;
