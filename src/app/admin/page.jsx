@@ -638,10 +638,12 @@ export default function AdminDashboardPage() {
                       {filteredProducts.map((prod) => (
                         <tr key={prod._id || prod.id} className="hover:bg-[#1a1e2e] transition-colors">
                           <td className="py-4 px-6 flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-[#1c2134] flex items-center justify-center shrink-0 border border-[#2b324d] p-1">
                               {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img src={prod.image} alt={prod.title} className="max-h-full max-w-full object-contain" />
-                            </div>
+                              <img
+                                src={prod.image && prod.image.trim() !== "" ? prod.image : "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&auto=format&fit=crop&q=80"}
+                                alt={prod.title || "Product"}
+                                className="max-h-full max-w-full object-contain"
+                              />
                             <span className="font-semibold text-white">{prod.title}</span>
                           </td>
                           <td className="py-4 px-6 text-slate-300">{prod.category}</td>
@@ -825,7 +827,11 @@ export default function AdminDashboardPage() {
                           >
                             <div className="w-10 h-10 rounded-xl bg-[#24293e] flex items-center justify-center shrink-0 border border-[#2b324d] p-1">
                               {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img src={item.image} alt={item.title} className="max-h-full max-w-full object-contain" />
+                              <img
+                                src={item.image && item.image.trim() !== "" ? item.image : "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&auto=format&fit=crop&q=80"}
+                                alt={item.title || "Item"}
+                                className="max-h-full max-w-full object-contain"
+                              />
                             </div>
                             <div className="flex-1 min-w-0">
                               <h4 className="text-xs font-bold text-white truncate">{item.title}</h4>
