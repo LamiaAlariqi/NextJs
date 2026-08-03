@@ -248,7 +248,7 @@ function LoginContent() {
           <div className="flex gap-3">
             <button
               type="button"
-              onClick={() => signIn("github")}
+              onClick={() => signIn("github", { callbackUrl: "/home" })}
               className="flex-1 bg-muted/60 hover:bg-muted border border-border text-foreground font-medium py-2.5 rounded-xl transition-all text-xs flex items-center justify-center gap-2 cursor-pointer"
             >
               <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
@@ -258,7 +258,7 @@ function LoginContent() {
             </button>
             <button
               type="button"
-              onClick={() => signIn("google")}
+              onClick={() => signIn("google", { callbackUrl: "/home" })}
               className="flex-1 bg-muted/60 hover:bg-muted border border-border text-foreground font-medium py-2.5 rounded-xl transition-all text-xs flex items-center justify-center gap-2 cursor-pointer"
             >
               <svg className="w-4 h-4" viewBox="0 0 24 24">
